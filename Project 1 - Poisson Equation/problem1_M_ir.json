@@ -1,0 +1,17 @@
+{
+    "Condition Type": "mixed",
+    "Reigeon Type": "Irregular",
+    "Grid Size": 128,
+    "Center": [0.5, 0.5],
+    "Radius": 0.3,
+    "f": "-(1-sin(x)+cos(x)*cos(x))*exp(sin(x)+y)",
+    "g": {
+        "x=0": ["-exp(y)", "Neumann"],
+        "x=1": ["exp(sin(1)+y)", "Dirichlet"],
+        "y=0": ["-exp(sin(x))", "Neumann"],
+        "y=1": ["exp(sin(x)+1)", "Dirichlet"],
+        "D": ["cos(x)*exp(sin(x)+y)*(x-cx)/R+exp(sin(x)+y)*(y-cy)/R", "Neumann"]
+    },
+    "Error Check": true,
+    "u": "exp(sin(x)+y)"
+}
