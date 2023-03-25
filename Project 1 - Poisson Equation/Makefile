@@ -3,8 +3,8 @@ INC=-Ijsoncpp-1.9.5/include/json -Iinclude
 LIB=-Ljsoncpp-1.9.5/build/lib -ljsoncpp
 OPTIMIZE=-O2 -O3 -Ofast
 
-all: $(JSONLIB) matrix.o mathExpr.o solver.o BVP.o test.o 
-	g++ -o test matrix.o mathExpr.o solver.o BVP.o test.o $(LIB) $(OPTIMIZE)
+all: $(JSONLIB) matrix.o mathExpr.o solver.o BVP.o solve.o 
+	g++ -o solve matrix.o mathExpr.o solver.o BVP.o solve.o $(LIB) $(OPTIMIZE)
 
 $(JSONLIB):
 	cd jsoncpp-1.9.5 && mkdir build
@@ -23,13 +23,13 @@ solver.o: src/solver.cpp include/solver.h src/matrix.cpp include/matrix.h src/ma
 BVP.o: src/BVP.cpp include/BVP.h src/solver.cpp include/solver.h src/matrix.cpp include/matrix.h src/mathExpr.cpp include/mathExpr.h
 	g++ -c src/BVP.cpp $(INC) $(OPTIMIZE)
 
-test.o: test.cpp src/BVP.cpp include/BVP.h src/solver.cpp include/solver.h src/matrix.cpp include/matrix.h src/mathExpr.cpp include/mathExpr.h
-	g++ -c test.cpp $(INC) $(OPTIMIZE)
+solve.o: solve.cpp src/BVP.cpp include/BVP.h src/solver.cpp include/solver.h src/matrix.cpp include/matrix.h src/mathExpr.cpp include/mathExpr.h
+	g++ -c solve.cpp $(INC) $(OPTIMIZE)
 
 clear:
-	rm test *.o
+	rm solve *.o
 
 clean:
 	if [ -f "result.txt" ];then rm -d result.txt; fi
-	rm test *.o
+	rm solve *.o
 	rm -r jsoncpp-1.9.5/build
