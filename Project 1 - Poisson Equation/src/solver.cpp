@@ -4,6 +4,8 @@
 #include <string>
 #include <map>
 #include <cmath>
+#include <iomanip>
+#include <algorithm>
 
 const double _epsL = 1e-12;
 
@@ -144,11 +146,7 @@ void irNeumannEquation(Matrix &A, const int &cnt, const double &cosa, const doub
     }
     b(1) = cosa;
     b(2) = sina;
-    // for(int i = 0; i < 6; i++)
-    //     std::cerr << pnt[i].getX() << " " << pnt[i].getY() << std::endl;
-    // std::cerr << coef << std::endl;
     ColVector res = solve(coef,b);
-    // std::cerr << "solved: " << res.T() << std::endl << std::endl;
     for(int i = 0; i < 6; i++)
         A(cnt, pnt[i].getID()) = res(i);
 }
@@ -381,7 +379,7 @@ void Solver::solve(Function2D &f, Function2D &g, const int &_m, std::string bond
             }
         }
 
-        if(bondaryDetail("D")=="Dirichlet"){
+        if(R && bondaryDetail("D")=="Dirichlet"){
             for(const Point &p : irp){
                 A(cnt, p.getID()) = 1;
                 b(cnt++) = g(p.getX(), p.getY());
@@ -393,7 +391,7 @@ void Solver::solve(Function2D &f, Function2D &g, const int &_m, std::string bond
         exit(-1);
     }
 
-    if(bondary=="Neumann" || bondary=="mixed" && bondaryDetail("D")=="Neumann"){
+    if(bondary=="Neumann" || bondary=="mixed" && R && bondaryDetail("D")=="Neumann"){
         for(const Point &p : irp){
             std::vector<Point> pnt(6);
             double cosb = (p.getX()-cx)/R;
@@ -503,11 +501,21 @@ double Solver::operator () (const double &x, const double &y) const{
 }
 
 std::ostream & operator << (std::ostream & out, const Solver & ps){
-    for(int i = 1; i <= ps.m; i++){
-        for(int j = 1; j <= ps.m; j++)
-            out << ps.Uval(ps.P(i,j)) << " ";
-        out << std::endl;
-    }
+    typedef std::pair< std::pair<double,double>, double > Vp;
+    std::vector<Vp> vec;
+    out << std::fixed << std::setprecision(12); 
+    for(int i = 1; i <= ps.m; i++)
+        for(int j = 1; j <= ps.m; j++){
+            double x = 1.0*i/(ps.m+1);
+            double y = 1.0*j/(ps.m+1);
+            if(!ps.inRange(x,y)) continue;
+            vec.push_back( std::make_pair( std::make_pair(x,y), ps.Uval(ps.P(i,j)) ) );
+        }
+    for(const Point & p : ps.irp)
+        vec.push_back( std::make_pair( std::make_pair(p.getX(),p.getY()), ps.Uval(p.getID())) );
+    std::sort(vec.begin(), vec.end());
+    for(const Vp & p : vec)
+        out << p.first.first << " " << p.first.second << " " << p.second << "\n";
     return out;
 }
 
@@ -534,7 +542,7 @@ void Solver::calcNeumannC(Function2D &u){
     std::cerr << "The numerical solutions should add a constant " << Neumann_C << std::endl;
 }
 
-double Solver::regularError(Function2D &u){
+double Solver::checkError(Function2D &u, const Norm &norm){
     if(m==0){
         std::cerr << "[Error] Cannot check the error of an empty solver" << std::endl;
         exit(-1);
@@ -542,28 +550,16 @@ double Solver::regularError(Function2D &u){
     if(pure_Neumann && !have_Neumann_C){
         calcNeumannC(u);
     }
-    double maxerr = 0;
+    std::vector<double> vec;
     for(int i = 1; i <= m; i++)
         for(int j = 1; j <= m; j++){
             double x = 1.0 * i / (m+1);
             double y = 1.0 * j / (m+1);
             if(!inRange(x,y)) continue;
-            maxerr = std::max( maxerr, fabs(Uval(P(i,j)) + Neumann_C - u(x,y)) );
+            vec.push_back(Uval(P(i,j)) + Neumann_C - u(x,y));
         }
-    return maxerr;
-}
-
-double Solver::irregularError(Function2D &u){
-    if(m==0){
-        std::cerr << "[Error] Cannot check the error of an empty solver" << std::endl;
-        exit(-1);
-    }
-    if(pure_Neumann && !have_Neumann_C){
-        calcNeumannC(u);
-    }
-    double maxerr = 0;
     for(const Point &p : irp){
-        maxerr = std::max( maxerr, fabs(Uval(p.getID()) + Neumann_C - u(p.getX(),p.getY())) );
+        vec.push_back( Uval(p.getID()) + Neumann_C - u(p.getX(),p.getY()) );
     }
-    return maxerr;
+    return norm(vec);
 }

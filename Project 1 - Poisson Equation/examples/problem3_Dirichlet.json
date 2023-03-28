@@ -1,0 +1,9 @@
+{
+    "Condition Type": "Dirichlet",
+    "Reigeon Type": "Regular",
+    "Grid Size": 16,
+    "f": "-400*(x^2-x+0.01*y^2-0.01*y+0.3075)*exp(10*(x-0.5)^2+(y-0.5)^2)",
+    "g": "exp(10*(x-0.5)^2+(y-0.5)^2)-1",
+    "Error Check": true,
+    "u": "exp(10*(x-0.5)^2+(y-0.5)^2)-1"
+}

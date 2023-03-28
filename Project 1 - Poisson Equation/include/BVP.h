@@ -24,7 +24,7 @@ public:
     void output(std::ostream & out);
     void output(const std::string & ofile);
     void output();
-    void checkError();
+    std::vector<double> checkError();
 };
 
 #endif

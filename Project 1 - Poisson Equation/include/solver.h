@@ -48,6 +48,11 @@ public:
     double getY() const;
 };
 
+class Norm{
+public:
+    virtual double operator () (const std::vector<double> &vec) const = 0;
+};
+
 class Solver{
 private:
     int m;
@@ -80,8 +85,7 @@ public:
 
     // 通过各网格点数值解与真解之间差值的平均，来确定纯Neumann条件下的常数C
     void calcNeumannC(Function2D &u);
-    double regularError(Function2D &u);
-    double irregularError(Function2D &u);
+    double checkError(Function2D &u, const Norm &norm);
 };
 
 #endif

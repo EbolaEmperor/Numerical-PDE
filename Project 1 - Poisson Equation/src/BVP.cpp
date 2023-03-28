@@ -89,6 +89,30 @@ public:
     }
 };
 
+class Norm_p : public Norm{
+private:
+    double p;
+public:
+    Norm_p(const int &p): p(p) {}
+    double operator () (const std::vector<double> &vec) const{
+        double sum = 0;
+        for(const double &x : vec)
+            sum += pow(fabs(x), p);
+        sum /= vec.size();
+        return pow(sum, 1.0/p);
+    }
+};
+
+class Norm_inf : public Norm{
+public:
+    double operator () (const std::vector<double> &vec) const{
+        double mx = 0;
+        for(const double &x : vec)
+            mx = std::max(mx, fabs(x));
+        return mx;
+    }
+};
+
 BVP::BVP(){}
 BVP::BVP(const Json::Value & prob){
     read(prob);
@@ -116,13 +140,15 @@ void BVP::printProblem(){
             cout << "         " << problem["g"]["x=1"][0].asString() << "  if x=1  (" << problem["g"]["x=1"][1].asString() << ")" << endl;
             cout << "         " << problem["g"]["y=0"][0].asString() << "  if y=0  (" << problem["g"]["y=0"][1].asString() << ")" << endl;
             cout << "         " << problem["g"]["y=1"][0].asString() << "  if y=1  (" << problem["g"]["y=1"][1].asString() << ")" << endl;
-            cout << "         " << problem["g"]["D"][0].asString() << "  if (x,y) in D  (" << problem["g"]["D"][1].asString() << ")" << endl;
+            if(problem["Reigeon Type"].asString()=="Irregular")
+                cout << "         " << problem["g"]["D"][0].asString() << "  if (x,y) in D  (" << problem["g"]["D"][1].asString() << ")" << endl;
         } else {
             cout << "g(x,y) = " << problem["g"]["x=0"].asString() << "  if x=0" << endl;
             cout << "         " << problem["g"]["x=1"].asString() << "  if x=1" << endl;
             cout << "         " << problem["g"]["y=0"].asString() << "  if y=0" << endl;
             cout << "         " << problem["g"]["y=1"].asString() << "  if y=1" << endl;
-            cout << "         " << problem["g"]["D"].asString() << "  if (x,y) in D  (" << problem["g"]["D"].asString() << ")" << endl;
+            if(problem["Reigeon Type"].asString()=="Irregular")
+                cout << "         " << problem["g"]["D"].asString() << "  if (x,y) in D" << endl;
         }
     }
     cout << "Grid Size: " << problem["Grid Size"].asInt() << endl;
@@ -184,18 +210,21 @@ void BVP::solve(){
             g2.setExpr("x=1", problem["g"]["x=1"][0].asString());
             g2.setExpr("y=0", problem["g"]["y=0"][0].asString());
             g2.setExpr("y=1", problem["g"]["y=1"][0].asString());
-            g2.setExpr("D", problem["g"]["D"][0].asString());
+            if(problem["Reigeon Type"].asString()=="Irregular")
+                g2.setExpr("D", problem["g"]["D"][0].asString());
             bonDtil.setBondary("x=0", problem["g"]["x=0"][1].asString());
             bonDtil.setBondary("x=1", problem["g"]["x=1"][1].asString());
             bonDtil.setBondary("y=0", problem["g"]["y=0"][1].asString());
             bonDtil.setBondary("y=1", problem["g"]["y=1"][1].asString());
-            bonDtil.setBondary("D", problem["g"]["D"][1].asString());
+            if(problem["Reigeon Type"].asString()=="Irregular")
+                bonDtil.setBondary("D", problem["g"]["D"][1].asString());
         } else {
             g2.setExpr("x=0", problem["g"]["x=0"].asString());
             g2.setExpr("x=1", problem["g"]["x=1"].asString());
             g2.setExpr("y=0", problem["g"]["y=0"].asString());
             g2.setExpr("y=1", problem["g"]["y=1"].asString());
-            g2.setExpr("D", problem["g"]["D"].asString());
+            if(problem["Reigeon Type"].asString()=="Irregular")
+                g2.setExpr("D", problem["g"]["D"].asString());
         }
         g2.addConstant("D", "cx", cx);
         g2.addConstant("D", "cy", cy);
@@ -229,14 +258,24 @@ void BVP::output(){
     output(cout);
 }
 
-void BVP::checkError(){
-    if(!problem["Error Check"].asBool()) return;
+std::vector<double> BVP::checkError(){
+    if(!problem["Error Check"].asBool())
+        return std::vector<double>();
     Fun2D u;
     cout << "----------------------------------------------------------" << endl;
     cout << "u(x,y) = " << problem["u"].asString() << endl;
     u.setExpr(problem["u"].asString());
     if(solver.isPureNeumann()) solver.calcNeumannC(u);
-    cout << "max error (at regular points): " << solver.regularError(u) << endl;
-    if(problem["Reigeon Type"].asString() == "Irregular")
-        cout << "max error (at irregular points): " << solver.irregularError(u) << endl;
+
+    std::vector<double> err;
+    err.push_back(solver.checkError(u, Norm_p(1)));
+    cout << "1-norm error: " << err.back() << endl;
+
+    err.push_back(solver.checkError(u, Norm_p(2)));
+    cout << "2-norm error: " << err.back() << endl;
+
+    err.push_back(solver.checkError(u, Norm_inf()));
+    cout << "max-norm error: " << err.back() << endl;
+
+    return err;
 }
