@@ -64,11 +64,6 @@ struct specialPoint{
 
 Operator::Operator(const int &_dim){
     dim = _dim;
-    irregular = false;
-}
-
-void Operator::setIrregular(const bool &rhs){
-    irregular = rhs;
 }
 
 //--------------------------------Injection-----------------------------
@@ -132,21 +127,8 @@ ColVector full_operator::operator () (const ColVector &v) const{
 
 linear_interpolation::linear_interpolation(const int &_dim):Operator(_dim){}
 
-ColVector linear_specialSolve(const std::vector<specialPoint> &vec){
-    Matrix A(3,3);
-    for(int i = 0; i < 3; i++){
-        A(0,i) = 1;
-        A(1,i) = vec[i+1].x - vec[0].x;
-        A(2,i) = vec[i+1].y - vec[0].y;
-    }
-    ColVector b(3);
-    b(0) = 1;
-    return solve(A,b);
-}
-
 ColVector linear_interpolation::operator () (const ColVector &v) const{
     if(dim==1){
-        // 一维线性插值
         ColVector res(v.n*2-1);
         for(int i = 0; i < v.n; i++){
             res(2*i) = v(i);
@@ -154,8 +136,7 @@ ColVector linear_interpolation::operator () (const ColVector &v) const{
             if(i<v.n-1) res(2*i+1) += 0.5*v(i);
         }
         return res;
-    } else if(!irregular){
-        // 二维规则网格线性插值
+    } else {
         int n = (int)round(sqrt(v.n)) - 1;
         ColVector res( (2*n+1)*(2*n+1) );
         for(int i = 0; i <= n; i++)
@@ -171,101 +152,12 @@ ColVector linear_interpolation::operator () (const ColVector &v) const{
                 if(i<n && j<n) res(IDX(2*n,2*i+1,2*j+1)) += 0.25*v(IDX(n,i,j));
             }
         return res;
-    } else {
-        // 二维扭曲网格线性插值
-        int n = (int)round(sqrt(v.n)) - 1;
-        ColVector res( (2*n+1)*(2*n+1) );
-        for(int i = 0; i <= n; i++){
-            res(IDX(2*n,2*i,0)) = v(IDX(n,i,0));
-            for(int j = 1; j <= n; j++){
-                res(IDX(2*n,2*i,2*j-1)) = 0.5 * (v(IDX(n,i,j-1))+v(IDX(n,i,j)));
-                res(IDX(2*n,2*i,2*j)) = v(IDX(n,i,j));
-            }
-            if(i == n) continue;
-            std::vector<specialPoint> sp(4);
-            sp[0] = specialPoint(2*n,2*i+1,0);
-            sp[1] = specialPoint(n,i,0);
-            sp[2] = specialPoint(n,i,1);
-            sp[3] = specialPoint(n,i+1,0);
-            ColVector coef = linear_specialSolve(sp);
-            res(IDX(2*n,2*i+1,0)) += 0.5 * (coef(0)*v(IDX(n,i,0)) + coef(1)*v(IDX(n,i,1)) + coef(2)*v(IDX(n,i+1,0)));
-            sp[2] = specialPoint(n,i+1,1);
-            coef = linear_specialSolve(sp);
-            res(IDX(2*n,2*i+1,0)) += 0.5 * (coef(0)*v(IDX(n,i,0)) + coef(1)*v(IDX(n,i+1,1)) + coef(2)*v(IDX(n,i+1,0)));
-
-            for(int j = 1; j <= n; j++){
-                sp[0] = specialPoint(2*n,2*i+1,2*j-1);
-                sp[1] = specialPoint(n,i,j-1);
-                sp[2] = specialPoint(n,i,j);
-                sp[3] = specialPoint(n,i+1,j-1);
-                coef = linear_specialSolve(sp);
-                res(IDX(2*n,2*i+1,2*j-1)) += 0.25 * (coef(0)*v(IDX(n,i,j-1)) + coef(1)*v(IDX(n,i,j)) + coef(2)*v(IDX(n,i+1,j-1)));
-                sp[3] = specialPoint(n,i+1,j);
-                coef = linear_specialSolve(sp);
-                res(IDX(2*n,2*i+1,2*j-1)) += 0.25 * (coef(0)*v(IDX(n,i,j-1)) + coef(1)*v(IDX(n,i,j)) + coef(2)*v(IDX(n,i+1,j)));
-                sp[1] = specialPoint(n,i+1,j-1);
-                coef = linear_specialSolve(sp);
-                res(IDX(2*n,2*i+1,2*j-1)) += 0.25 * (coef(0)*v(IDX(n,i+1,j-1)) + coef(1)*v(IDX(n,i,j)) + coef(2)*v(IDX(n,i+1,j)));
-                sp[2] = specialPoint(n,i,j-1);
-                coef = linear_specialSolve(sp);
-                res(IDX(2*n,2*i+1,2*j-1)) += 0.25 * (coef(0)*v(IDX(n,i+1,j-1)) + coef(1)*v(IDX(n,i,j-1)) + coef(2)*v(IDX(n,i+1,j)));
-                sp[0] = specialPoint(2*n,2*i+1,2*j);
-                sp[1] = specialPoint(n,i,j-1);
-                sp[2] = specialPoint(n,i,j);
-                sp[3] = specialPoint(n,i+1,j);
-                coef = linear_specialSolve(sp);
-                res(IDX(2*n,2*i+1,2*j)) += 0.5 * (coef(0)*v(IDX(n,i,j-1)) + coef(1)*v(IDX(n,i,j)) + coef(2)*v(IDX(n,i+1,j)));
-                sp[1] = specialPoint(n,i+1,j-1);
-                coef = linear_specialSolve(sp);
-                res(IDX(2*n,2*i+1,2*j)) += 0.5 * (coef(0)*v(IDX(n,i+1,j-1)) + coef(1)*v(IDX(n,i,j)) + coef(2)*v(IDX(n,i+1,j)));
-            }
-        }
-        return res;
     }
 }
 
 //---------------------------Quadradic Interpolation-----------------------------
 
 quadradic_interpolation::quadradic_interpolation(const int &_dim):Operator(_dim){}
-
-ColVector quadradic_specialSolve(const std::vector<specialPoint> &sp){
-    Matrix A(6,6);
-    for(int i = 1; i <= 6; i++){
-        A(0,i-1) = 1;
-        A(1,i-1) = sp[i].x - sp[0].x;
-        A(2,i-1) = sp[i].y - sp[0].y;
-        A(3,i-1) = 0.5 * (sp[i].x - sp[0].x) * (sp[i].x - sp[0].x);
-        A(4,i-1) = 0.5 * (sp[i].y - sp[0].y) * (sp[i].y - sp[0].y);
-        A(5,i-1) = (sp[i].x - sp[0].x) * (sp[i].y - sp[0].y);
-    }
-    ColVector b(6);
-    b(0) = 1;
-    return solve(A,b);
-}
-
-double quadradic_irregularInterpolation(const ColVector &v, const int &n, const int &i, const int &j, const std::string &pos, const specialPoint &p0){
-    std::vector<specialPoint> sp(7);
-    int fgx, fgy;
-    if(pos=="LD"){
-        fgx = 1; fgy = 1;
-    } else if(pos=="LU"){
-        fgx = 1; fgy = -1;
-    } else if(pos=="RD"){
-        fgx = -1; fgy = 1;
-    } else if(pos=="RU"){
-        fgx = -1; fgy = -1;
-    }
-    sp[0] = p0;
-    sp[1] = specialPoint(n,i,j);
-    sp[2] = specialPoint(n,i,j+fgy);
-    sp[3] = specialPoint(n,i,j+2*fgy);
-    sp[4] = specialPoint(n,i+fgx,j);
-    sp[5] = specialPoint(n,i+fgx,j+fgy);
-    sp[6] = specialPoint(n,i+2*fgx,j);
-    ColVector coef = quadradic_specialSolve(sp);
-    return coef(0)*v(IDX(n,i,j)) + coef(1)*v(IDX(n,i,j+fgy)) + coef(2)*v(IDX(n,i,j+2*fgy)) 
-         + coef(3)*v(IDX(n,i+fgx,j)) + coef(4)*v(IDX(n,i+fgx,j+fgy)) + coef(5)*v(IDX(n,i+2*fgx,j));
-}
 
 ColVector quadradic_interpolation::operator () (const ColVector &v) const{
     if(v.n <= 2){
@@ -274,7 +166,6 @@ ColVector quadradic_interpolation::operator () (const ColVector &v) const{
         return lin(v);
     }
     if(dim==1){
-        //一维二次插值
         ColVector res(v.n*2-1);
         for(int i = 0; i < v.n; i++)
             res(2*i) = v(i);
@@ -283,8 +174,7 @@ ColVector quadradic_interpolation::operator () (const ColVector &v) const{
         for(int i = 1; i < v.n-2; i++)
             res(2*i+1) = 9.0/16.0*(v(i)+v(i+1)) - 1.0/16.0*(v(i-1)+v(i+2));
         return res;
-    } else if(!irregular){
-        //二维规则网格二次插值
+    } else {
         int n = (int)round(sqrt(v.n)) - 1;
         ColVector res( (2*n+1)*(2*n+1) );
         for(int i = 0; i <= n; i++)
@@ -316,69 +206,6 @@ ColVector quadradic_interpolation::operator () (const ColVector &v) const{
             for(int j = 1; j < n-1; j++){
                 res(IDX(2*n,2*i+1,2*j+1)) = 5.0/16.0 * (v(IDX(n,i,j))+v(IDX(n,i+1,j))+v(IDX(n,i,j+1))+v(IDX(n,i+1,j+1)))
                                             -1.0/32.0 * (v(IDX(n,i,j-1))+v(IDX(n,i,j+2))+v(IDX(n,i-1,j))+v(IDX(n,i-1,j+1))+v(IDX(n,i+1,j-1))+v(IDX(n,i+1,j+2))+v(IDX(n,i+2,j))+v(IDX(n,i+2,j+1)));
-            }
-        return res;
-    } else {
-        //二维扭曲网格二次插值
-        int n = (int)round(sqrt(v.n)) - 1;
-        ColVector res( (2*n+1)*(2*n+1) );
-        for(int i = 0; i <= n; i++)
-            for(int j = 0; j <= n; j++)
-                res(IDX(2*n,2*i,2*j)) = v(IDX(n,i,j));
-        for(int i = 0; i <= n; i++){
-            res(IDX(2*n,2*i,1)) = 0.375*v(IDX(n,i,0)) + 0.75*v(IDX(n,i,1)) - 0.125*v(IDX(n,i,2));
-            res(IDX(2*n,2*i,2*n-1)) = 0.375*v(IDX(n,i,n)) + 0.75*v(IDX(n,i,n-1)) - 0.125*v(IDX(n,i,n-2));
-            for(int j = 1; j < n-1; j++)
-                res(IDX(2*n,2*i,2*j+1)) = 9.0/16.0*(v(IDX(n,i,j))+v(IDX(n,i,j+1))) - 1.0/16.0*(v(IDX(n,i,j-1))+v(IDX(n,i,j+2)));
-        }
-        for(int j = 0; j <= n; j++){
-            if(n==2 && j==1){ //此时正常算会越界，需要特判
-                res(IDX(2*n,1,2*j)) = quadradic_irregularInterpolation(v, n, 0, j-1, "LD", specialPoint(2*n,1,2*j));
-                res(IDX(2*n,2*n-1,2*j)) = quadradic_irregularInterpolation(v, n, n, j-1, "RD", specialPoint(2*n,2*n-1,2*j));
-                continue;
-            }
-            if(j < n-1){
-                res(IDX(2*n,1,2*j)) = quadradic_irregularInterpolation(v, n, 0, j, "LD", specialPoint(2*n,1,2*j));
-                res(IDX(2*n,2*n-1,2*j)) = quadradic_irregularInterpolation(v, n, n, j, "RD", specialPoint(2*n,2*n-1,2*j));
-            } else {
-                res(IDX(2*n,1,2*j)) = quadradic_irregularInterpolation(v, n, 0, j, "LU", specialPoint(2*n,1,2*j));
-                res(IDX(2*n,2*n-1,2*j)) = quadradic_irregularInterpolation(v, n, n, j, "RU", specialPoint(2*n,2*n-1,2*j));
-            }
-            for(int i = 1; i < n-1; i++){
-                if(j+2 <= n && j-2 >= 0){
-                    res(IDX(2*n,2*i+1,2*j)) = 0.25 * quadradic_irregularInterpolation(v, n, i, j, "LD", specialPoint(2*n,2*i+1,2*j))
-                                            + 0.25 * quadradic_irregularInterpolation(v, n, i+1, j, "RD", specialPoint(2*n,2*i+1,2*j))
-                                            + 0.25 * quadradic_irregularInterpolation(v, n, i, j, "LU", specialPoint(2*n,2*i+1,2*j))
-                                            + 0.25 * quadradic_irregularInterpolation(v, n, i+1, j, "RU", specialPoint(2*n,2*i+1,2*j));
-                } else if(j+2 <= n){
-                    res(IDX(2*n,2*i+1,2*j)) = 0.5 * quadradic_irregularInterpolation(v, n, i, j, "LD", specialPoint(2*n,2*i+1,2*j))
-                                            + 0.5 * quadradic_irregularInterpolation(v, n, i+1, j, "RD", specialPoint(2*n,2*i+1,2*j));
-                } else if(j-2 >= 0){
-                    res(IDX(2*n,2*i+1,2*j)) = 0.5 * quadradic_irregularInterpolation(v, n, i, j, "LU", specialPoint(2*n,2*i+1,2*j))
-                                            + 0.5 * quadradic_irregularInterpolation(v, n, i+1, j, "RU", specialPoint(2*n,2*i+1,2*j));
-                }
-            }
-        }
-        res(IDX(2*n,1,1)) = quadradic_irregularInterpolation(v, n, 0, 0, "LD", specialPoint(2*n,1,1));
-        res(IDX(2*n,1,2*n-1)) = quadradic_irregularInterpolation(v, n, 0, n, "LU", specialPoint(2*n,1,2*n-1));
-        res(IDX(2*n,2*n-1,1)) = quadradic_irregularInterpolation(v, n, n, 0, "RD", specialPoint(2*n,2*n-1,1));
-        res(IDX(2*n,2*n-1,2*n-1)) = quadradic_irregularInterpolation(v, n, n, n, "RU", specialPoint(2*n,2*n-1,2*n-1));
-        for(int i = 1; i < n-1; i++){
-            res(IDX(2*n,1,2*i+1)) = 0.5 * quadradic_irregularInterpolation(v, n, 0, i, "LD", specialPoint(2*n,1,2*i+1))
-                                  + 0.5 * quadradic_irregularInterpolation(v, n, 0, i+1, "LU", specialPoint(2*n,1,2*i+1));
-            res(IDX(2*n,2*i+1,1)) = 0.5 * quadradic_irregularInterpolation(v, n, i, 0, "LD", specialPoint(2*n,2*i+1,1))
-                                  + 0.5 * quadradic_irregularInterpolation(v, n, i+1, 0, "RD", specialPoint(2*n,2*i+1,1));
-            res(IDX(2*n,2*n-1,2*i+1)) = 0.5 * quadradic_irregularInterpolation(v, n, n, i, "RD", specialPoint(2*n,2*n-1,2*i+1))
-                                      + 0.5 * quadradic_irregularInterpolation(v, n, n, i+1, "RU", specialPoint(2*n,2*n-1,2*i+1));
-            res(IDX(2*n,2*i+1,2*n-1)) = 0.5 * quadradic_irregularInterpolation(v, n, i, n, "LU", specialPoint(2*n,2*i+1,2*n-1))
-                                      + 0.5 * quadradic_irregularInterpolation(v, n, i+1, n, "RU", specialPoint(2*n,2*i+1,2*n-1));
-        }
-        for(int i = 1; i < n-1; i++)
-            for(int j = 1; j < n-1; j++){
-                res(IDX(2*n,2*i+1,2*j+1)) = 0.25 * quadradic_irregularInterpolation(v, n, i, j, "LD", specialPoint(2*n,2*i+1,2*j+1))
-                                          + 0.25 * quadradic_irregularInterpolation(v, n, i+1, j, "RD", specialPoint(2*n,2*i+1,2*j+1))
-                                          + 0.25 * quadradic_irregularInterpolation(v, n, i, j+1, "LU", specialPoint(2*n,2*i+1,2*j+1))
-                                          + 0.25 * quadradic_irregularInterpolation(v, n, i+1, j+1, "RU", specialPoint(2*n,2*i+1,2*j+1));
             }
         return res;
     }

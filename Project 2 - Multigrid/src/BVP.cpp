@@ -385,11 +385,6 @@ void BVP::solve(){
     else if(problem["Prolongation"].asString() == "quadradic")
         prolong = new quadradic_interpolation(dim);
     
-    if(problem["Reigeon Type"].asString() == "Irregular"){
-        restri -> setIrregular(true);
-        prolong -> setIrregular(true);
-    }
-
     if(dim == 2)
         solver = new Solver2D(*restri, *prolong);
     else

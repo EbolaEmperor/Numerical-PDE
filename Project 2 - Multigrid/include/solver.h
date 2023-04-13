@@ -11,11 +11,9 @@
 class Operator{
 protected:
     int dim;
-    bool irregular;
 public:
     Operator(const int &_dim);
     virtual ColVector operator () (const ColVector &v) const = 0;
-    void setIrregular(const bool &rhs);
 };
 
 class injection : public Operator{
