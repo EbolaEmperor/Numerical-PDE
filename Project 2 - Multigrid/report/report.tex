@@ -1,0 +1,1567 @@
+\documentclass[lang=cn,10pt]{elegantbook}
+
+\title{Project 02: 多重网格(Multigrid)}
+
+\author{Wenchong Huang}
+\date{April 10, 2023}
+
+\setcounter{tocdepth}{3}
+
+\logo{logo-blue.jpg}
+\cover{cover.jpeg}
+
+% 本文档命令
+\usepackage{array, float}
+\newcommand{\ccr}[1]{\makecell{{\color{#1}\rule{1cm}{1cm}}}}
+
+% 修改标题页的橙色带
+% \definecolor{customcolor}{RGB}{32,178,170}
+% \colorlet{coverlinecolor}{customcolor}
+
+\begin{document}
+
+\maketitle
+\frontmatter
+
+\tableofcontents
+
+\mainmatter
+
+\chapter{用户手册}
+
+\section{编译与测试说明}
+
+若想编译并运行本文的所有测试，请在项目根目录下执行：
+\begin{lstlisting}
+  make run
+\end{lstlisting}
+
+初次编译需要编译jsoncpp，大约需要一分钟。
+
+本文有一些极限测试，这些测试使用的网格极大，因此会占用您大量的系统内存，请保证至少4G的可用内存。完整运行测试需要大约20分钟。
+
+若想清除编译过程产生的所有文件，请在项目根目录下执行：
+\begin{lstlisting}
+  make clean
+\end{lstlisting}
+
+\section{方程与参数的自定义说明}
+
+您需要将方程按下列格式描述，并保存为json文件。下面是样例1：
+\begin{lstlisting}
+  {
+    "Condition Type": "Dirichlet",
+    "Dimension": 1,
+    "Grid Size": 4194304,
+    "f": "(sin(x)-cos(x)*cos(x))*exp(sin(x))",
+    "g": {
+        "x=0": "1",
+        "x=1": "exp(sin(1))"
+    },
+    "Cycle Type": "FMG",
+    "Max Iter": 5,
+    "eps": 1e-16,
+    "Restriction": "full operator",
+    "Prolongation": "quadradic",
+    "Error Check": true,
+    "u": "exp(sin(x))"
+  }
+\end{lstlisting}
+
+下面是样例2:
+\begin{lstlisting}
+  {
+    "Condition Type": "mixed",
+    "Dimension": 2,
+    "Reigeon Type": "Irregular",
+    "Grid Size": 64,
+    "f": "-(1-sin(x)+cos(x)*cos(x))*exp(sin(x)+y)",
+    "g": {
+        "x=0": ["-cos(x)*exp(sin(x)+y)", "Neumann"],
+        "x=1": ["exp(sin(x)+y)", "Dirichlet"],
+        "Down Bondary": ["cos(x)*exp(sin(x)+y)*(pi/16*cos(pi*x))/sqrt(pi*pi/256*(cos(pi*x))^2+1)+exp(sin(x)+y)*(-1)/sqrt(pi*pi/256*(cos(pi*x))^2+1)", "Neumann"],
+        "y=1": ["exp(sin(x)+y)", "Neumann"]
+    },
+    "Cycle Type": "FMG",
+    "Restriction": "full operator",
+    "Prolongation": "linear",
+    "Max Iter": 3,
+    "eps": 1e-6,
+    "Error Check": true,
+    "u": "exp(sin(x)+y)"
+}
+\end{lstlisting}
+
+各参数说明如下：
+
+\begin{enumerate}[(1)]
+\item \verb|Condition Type|是条件的类型，您可以输入\verb|Dirichlet|，\verb|Neumann|或\verb|mixed|；
+\item \verb|Dimension|是维数，您可以输入1或2
+\item \verb|Reigeon Type|是区域的类型，您可以输入\verb|Regular|或\verb|Irregular|；
+\item \verb|Grid Size|是网格的大小，您需要输入一个正整数，并且必须为2的正整数次幂；
+\item \verb|Center|与\verb|Radius|用于描述不规则区域的形状；
+\item \verb|f|用于描述$-\Delta u$；
+\item \verb|g|用于描述边值条件，请按不同边界列出，按样例1所示。如果您的条件类型是\verb|mixed|，您必须按照样例2的写法列出边界条件。
+\item \verb|Cycle Type|：Cycle的类型。您可以输入\verb|V|或\verb|FMG|。
+\item \verb|Restriction|：限制算子的类型。您可以输入\verb|injection|或\verb|full operator|。
+\item \verb|Prolongation|：插值算子的类型。您可以输入\verb|linear|或\verb|quadradic|。
+\item \verb|Max Iter|：最大迭代次数。您可以输入一个正整数。
+\item \verb|eps|：求解精度需求。您可以输入一个正浮点数。
+\item \verb|Check Error|：若您需要验证误差，请设为\verb|true|，否则设为\verb|false|；
+\item \verb|u|：真实解。如果您需要验证误差，您必须提供真实解的表达式。
+\end{enumerate}
+
+使用
+\begin{lstlisting}
+    ./solve 文件名
+\end{lstlisting}
+
+来求解您的方程。
+
+\chapter{设计手册}
+
+\section{求解器类与继承关系}
+
+在这个Project中，我们放弃了10分的模板类附加分，并不是因为不会写，而是我们认为有更加优美的设计方式。事实上，模板类的缺点很明显，您只能将源代码写在\verb|.h|头文件中，这会让您的头文件显得杂乱不堪，您无法像我们一样在头文件中只声明类与函数，在源程序中实现函数。另外，如果您使用了\verb|template<int dim>|，那么您的代码一定四处充斥着诸如\verb|if(dim==1)...else...|的判断，这是丑陋的。现在请让我们向您提供一种更加优美的设计方式。
+
+首先，定义根求解器，如下：
+\begin{lstlisting}
+  class rootSolver{
+    protected:
+        int n; // Grid Size
+        ColVector cur, b;
+        const Operator & restriction;
+        const Operator & prolongation;
+        std::string bondary;
+        BType bonDetail;
+        double eps;
+        int maxiter;
+        int dim;
+        std::vector<SparseMatrix> Ah;
+        int cycle; // cycle=1:V-Cycle  cycle=2:FMG-Cycle
+        bool pure_Neumann;
+        double neumannC;
+        bool irregular;
+        virtual SparseMatrix getAh(const int &n) const = 0;
+        void initAh();
+        ColVector VC(const int &d, const int &n, ColVector v, const ColVector &f);
+        ColVector FMG(const int &d, const int &n, const ColVector &f);
+    
+    public:
+        rootSolver(const Operator & restriction, const Operator & prolongation);
+        void init(const int &_n, const Function &f, const Function &g, const std::string &bon);
+        virtual void init(const int &_n, const Function &f, const Function &g, const std::string &bon, const BType &bonDetail) = 0;
+        void setEps(const double &_eps);
+        void setMaxiter(const int &N);
+        void setCycle(const std::string &cy);
+        void setIrregular(const bool &rhs);
+        void solve();
+        bool isPureNeumann() const;
+        virtual void output(std::ostream& fout) const = 0;
+        virtual double calcNeumannC(const Function &u) = 0;
+        virtual double checkError(const Function &u, const Norm &norm) const = 0;
+    };
+\end{lstlisting}
+
+这是一个不能直接实例化的类。事实上，成员变量与大部分成员函数对于一维和二维而言都是一样的，因此我们将其声明在根求解器中，并实现它们。对于一维和二维情况下不一样的函数，我们在根求解器中将其声明为虚函数，由子类实现。下面定义一维与二维求解器：
+\begin{lstlisting}
+  class Solver1D : public rootSolver{
+    private:
+        SparseMatrix getAh(const int &n) const;
+    public:
+        Solver1D(const Operator & restriction, const Operator & prolongation);
+        void init(const int &_n, const Function &f, const Function &g, const std::string &bon, const BType &bonDetail);
+        void output(std::ostream& fout) const;
+        double calcNeumannC(const Function &u);
+        double checkError(const Function &u, const Norm &norm) const;
+    };
+    
+    class Solver2D : public rootSolver{
+    private:
+        SparseMatrix getAh(const int &n) const;
+    public:
+        Solver2D(const Operator & restriction, const Operator & prolongation);
+        void init(const int &_n, const Function &f, const Function &g, const std::string &bon, const BType &bonDetail);
+        void output(std::ostream& fout) const;
+        double calcNeumannC(const Function &u);
+        double checkError(const Function &u, const Norm &norm) const;
+    };
+\end{lstlisting}
+
+它们继承了根求解器，并将根求解器中的虚函数实化。
+
+\section{算子类与继承关系}
+
+所有的算子都是算子基类的子类。算子基类定义如下：
+\begin{lstlisting}
+  class Operator{
+    protected:
+        int dim;
+        bool irregular;
+    public:
+        Operator(const int &_dim);
+        virtual ColVector operator () (const ColVector &v) const = 0;
+        void setIrregular(const bool &rhs);
+    };
+\end{lstlisting}
+
+一个算子需要继承算子基类，并定义\verb|()|运算，例如\verb|injection|算子定义如下：
+\begin{lstlisting}
+  class injection : public Operator{
+  public:
+      injection(const int &_dim);
+      ColVector operator () (const ColVector &v) const;
+  };
+\end{lstlisting}
+
+\section{表达式解析器}
+
+为了让用户能够自定义方程而不必重新编译，我们设计了一个表达式解析器\verb|mathExpr|，内部实现使用了简单的堆栈与递归，能够支持所有的基本运算与初等函数。声明略。
+
+用户只需将表达式以字符串格式传入，并将变量定义好，再添加一些自定义的常量，就可以求表达式的值。下面是一个例子，计算$u(x,y)=e^{\sin x+y}+C\;(C=2)$在$x=y=0.5$处的点值。
+\begin{lstlisting}
+  Expression expr;                    // 定义解析器
+  expr.setExpr("exp(sin(x)+y)+C");    // 传入表达式
+  expr.addConstant("C", 2);           // 声明常量
+  expr.addVariable("x");              // 声明变量
+  expr.addVariable("y");
+  vector<double> parm(2);             // 以vector格式传入各变量值
+  parm[0] = parm[1] = 0.5;
+  cout << expr(parm) << endl;
+\end{lstlisting}
+
+\section{面向用户的二次封装}
+
+考虑到求解器的设计比较复杂，对于用户并不友好，我们进行了二次封装。二次封装实现了一个类\verb|BVP|，声明如下。
+\begin{lstlisting}
+  class BVP{
+  private:
+      Json::Value problem;
+      rootSolver *solver;
+
+  public:
+      BVP();
+      BVP(const Json::Value & prob);
+      BVP(const char * ifile);
+      BVP(const std::string & ifile);
+
+      void checkParse();
+      void printProblem();
+      void read(const char * ifile);
+      void read(const std::string & ifile);
+      void read(const Json::Value & prob);
+      void solve();
+      void output(std::ostream & out);
+      void output(const std::string & ofile);
+      void output();
+      std::vector<double> checkError();
+  };
+\end{lstlisting}
+
+用户只需写一个json（格式见1.2节）作为输入，既可以用\verb|.json|文件，也可以直接传入一个\verb|Json::Value|对象。这里以文件输入为例，给出用户通过二次封装来调用求解器的示例。
+\begin{lstlisting}
+  BVP bvp;
+  bvp.read("input.json");                 // 读取输入文件input.json
+  bvp.printProblem();                     // 将问题的基本信息输出
+  bvp.solve();                            // 求解问题
+  bvp.output("result.txt");               // 将解输出到文件result.txt中
+  vector<double>err = bvp.checkError();   // 检查1范数、2范数、无穷范数下的误差
+\end{lstlisting}
+
+\section{迭代的设计要点与优化}
+
+\subsection{正常终止与被迫终止}
+
+正常终止有两种情况：达到给定最大迭代次数，或达到预设求解精度。后者的判断如下。
+
+假设第$i$次迭代的结果为$\mathbf{v}$，第$i+1$次迭代的结果为$\mathbf{v}+\mathbf{v}'$，当$\mathbf{v}'<\text{eps}$时，终止迭代，以$\mathbf{v}+\mathbf{v}'$作为最终结果。
+
+有时候，在用户指定的网格大小下，由于理论误差的存在，无法达到用户的预设精度，此时离散方程组的求解已经达到最佳，再迭代下去毫无意义，因此被迫中止。判断条件如下。
+
+假设第$i$次迭代的结果为$\mathbf{v}$，第$i+1$次迭代的结果为$\mathbf{v}+\mathbf{v}'$，第$i+2$次迭代的结果为$\mathbf{v}+\mathbf{v}'+\mathbf{v}''$，当$||\mathbf{v}''||_\infty>||\mathbf{v}'||_\infty$时，终止迭代，以$\mathbf{v}+\mathbf{v}'$作为最终结果。
+
+\subsection{FMG-Cycle的重复迭代}
+
+很多同学认为，FMG-Cycle没有初始值的输入，因此只能执行一次迭代，所以求解精度不如多次迭代的V-Cycle。这是完全错误的。事实上，假设FMG-Cycle第一次迭代的结果为$\mathbf{v}$，我们可以令$\mathbf{f}'=\mathbf{f}-A\mathbf{v}$，然后将$\mathbf{f'}$作为方程右边提供给求解器，重复FMG-Cycle求得$\mathbf{v}'$，此时$\mathbf{v}+\mathbf{v}'$即为两次FMG-Cycle的结果。如此反复，就可以让FMG-Cycle执行多次迭代，以达到更高的求解精度。
+
+事实上，将V-Cycle的迭代方式也改成这样，比每次传入$\mathbf{v}$重复迭代，效果要更好。因此我们的设计中统一采用了这种迭代方式。
+
+\subsection{$A^h$的预算优化}
+
+在一些naive的设计中，往往是在每一层V-Cycle的开始计算出这一层的$A^h$，然后在这一层返回后，计算出的$A^h$就被销毁。这样会存在大量的内存申请与释放。众所周知，现代计算设备的瓶颈在于内存，而不是CPU，因此上述过程对计算资源的浪费极大。
+
+我们提出的方案是在求解器solve过程的开始，预先算出每一层V-Cycle需要用到的$A^h$，用一个数组存储。接下来每次迭代，每一层V-Cycle，直接以常量引用的方式使用预先算好的$A^h$即可，不存在内存的重复申请与复制。在整个求解过程结束后，再销毁所有的$A^h$。
+
+实验证明，这样的处理方式能将程序提速2至3倍。
+
+\subsection{纯Neumann条件下矩阵不适定的处理方法}
+
+我们不对方程做任何形式的扰动，直接使用多重网格求解。事实上，尽管Jacobi迭代是发散的，但是存在一个一维的解空间，在迭代的过程中，当前解与解空间的距离会越来越小，因此我们总是能收敛到一个解。
+
+我们得到的解与真实解相差一个常数$C$，在检查真实误差时，我们取真实解减去数值解的最大最小值平均，作为$C$的值，然后将数值解加上$C$后进行误差估计。
+
+\chapter{一维区域中的BVP}
+
+\section{设计要点}
+
+\subsection{一维区域的二次插值}
+
+考虑用$ih,(i+1)h,(i+2)h$处的点值插值得到$ih+\frac{h}{2}$处的点值。事实上，三点唯一确定一个二次函数，直接待定系数法求出函数，再将$ih+\frac{h}{2}$代入即可，公式为：
+\begin{equation}
+  U^{h/2}_{2i+1} = \frac{3}{8}U^h_{i} + \frac{6}{8}U^h_{i+1} - \frac{1}{8}U^h_{i+2} + O(h^3).
+\end{equation}
+
+这样得到的公式关于$x=ih+\frac{h}{2}$不对称，为了使插值系数更加对称，我们用$(i-1)h,ih,(i+1)h$处的点值再做一次二次插值，得到：
+\begin{equation}
+  U^{h/2}_{2i+1} = \frac{6}{8}U^h_{i} + \frac{3}{8}U^h_{i+1} - \frac{1}{8}U^h_{i-1} + O(h^3).
+\end{equation}
+
+将上面两式相加，再乘$\frac{1}{2}$，即可得到中心对称的二次插值公式：
+\begin{equation}
+  U^{h/2}_{2i+1} = \frac{9}{16}U^h_{i} + \frac{9}{16}U^h_{i+1} - \frac{1}{16}U^h_{i-1} - \frac{1}{16}U^h_{i+2} + O(h^3).
+\end{equation}
+
+对于靠近边界的点，直接使用公式(3.3)会有访问越界风险，需要视点的位置使用不那么对称的(3.1)或(3.2)。
+
+\section{数值实验}
+
+\subsection{Dirichlet边值问题的求解、误差分析、收敛性分析}
+
+考虑由精确解$u(x)=e^{\sin x}$导出的Dirichlet边值问题
+\begin{equation}
+  \left\{
+    \begin{array}{l}
+      -u''(x) = (\sin x-\cos^2 x)e^{\sin x},\quad x\in\Omega \\
+      u(0)=0,\quad u(1)=e^{\sin 1}
+    \end{array}
+  \right. .
+\end{equation}
+
+我们用$n=512,1024,...,32768$的网格测试，使用FMG-Cycle，限制算子选择Full Operator，插值算子选择二次插值。当$n=512,...,4096$时，误差分布如下图所示。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.95\linewidth]{figure/1-1-1.eps}
+      \caption*{$n=512$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/1-1-2.eps}
+    \caption*{$n=1024$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/1-1-3.eps}
+    \caption*{$n=2048$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/1-1-4.eps}
+    \caption*{$n=4096$}
+  \end{minipage}
+\end{figure}
+
+可以看到，在Dirichlet条件下，格点越靠近边界，最终的计算误差越小。将数值解与真实解的误差用范数估计，并根据$n=16384$增加到$n=32768$时误差减小的倍数，估计各范数下的收敛阶，结果如下表。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc|c}
+  \textbf{$n$}        & 512                 & 1024                 & 2048                 & 4096                 & 8192                 & 16384                & 32768                & 收敛阶 \\ \hline
+  $||\cdot||_1$      & $1.24\times 10^{-7}$ & $3.10\times 10^{-8}$ & $7.76\times 10^{-9}$ & $1.94\times 10^{-9}$ & $4.85\times 10^{-10}$ & $1.21\times 10^{-10}$ & $3.03\times 10^{-11}$ & $2.000$\\
+  $||\cdot||_2$      & $1.37\times 10^{-7}$ & $3.44\times 10^{-8}$ & $8.60\times 10^{-9}$ & $2.15\times 10^{-9}$ & $5.37\times 10^{-10}$ & $1.34\times 10^{-10}$ & $3.36\times 10^{-11}$ & $2.000$\\
+  $||\cdot||_\infty$ & $1.93\times 10^{-7}$ & $4.83\times 10^{-8}$ & $1.21\times 10^{-8}$ & $3.02\times 10^{-9}$ & $7.54\times 10^{-10}$ & $1.89\times 10^{-10}$ & $4.72\times 10^{-11}$ & $2.000$
+  \end{tabular}
+\end{table}
+
+符合二阶收敛的理论结果。
+
+\subsection{Neumann边值问题的求解、误差分析、收敛性分析}
+
+考虑由精确解$u(x)=e^{\sin x}$导出的Neumann边值问题
+\begin{equation}
+  \left\{
+    \begin{array}{l}
+      -u''(x) = (\sin x-\cos^2 x)e^{\sin x},\quad x\in\Omega \\
+      u'(0)=1,\quad u'(1)=\cos 1\cdot e^{\sin 1}
+    \end{array}
+  \right. .
+\end{equation}
+
+我们用$n=512,1024,...,32768$的网格测试，使用FMG-Cycle，限制算子选择Full Operator，插值算子选择二次插值。当$n=512,...,4096$时，误差分布如下图所示。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.8\linewidth]{figure/1-2-1.eps}
+      \caption*{$n=512$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{figure/1-2-2.eps}
+    \caption*{$n=1024$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{figure/1-2-3.eps}
+    \caption*{$n=2048$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{figure/1-2-4.eps}
+    \caption*{$n=4096$}
+  \end{minipage}
+\end{figure}
+
+将数值解与真实解的误差用范数估计，并根据$n=16384$增加到$n=32768$时误差减小的倍数，估计各范数下的收敛阶，结果如下表。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc|c}
+  \textbf{$n$}        & 512                 & 1024                 & 2048                 & 4096                 & 8192                 & 16384                & 32768                & 收敛阶 \\ \hline
+  $||\cdot||_1$      & $6.98\times 10^{-6}$ & $1.74\times 10^{-7}$ & $4.36\times 10^{-8}$ & $1.09\times 10^{-8}$ & $2.72\times 10^{-9}$ & $6.81\times 10^{-10}$ & $1.70\times 10^{-10}$ & $2.003$\\
+  $||\cdot||_2$      & $7.95\times 10^{-6}$ & $1.98\times 10^{-7}$ & $4.96\times 10^{-8}$ & $1.24\times 10^{-8}$ & $3.10\times 10^{-9}$ & $7.75\times 10^{-10}$ & $1.93\times 10^{-10}$ & $2.003$\\
+  $||\cdot||_\infty$ & $1.25\times 10^{-6}$ & $3.12\times 10^{-7}$ & $7.81\times 10^{-8}$ & $1.95\times 10^{-8}$ & $4.88\times 10^{-9}$ & $1.22\times 10^{-9}$ & $3.04\times 10^{-10}$ & $2.003$
+  \end{tabular}
+\end{table}
+
+符合二阶收敛的理论结果。
+
+\subsection{混合边值问题的求解、误差分析、收敛性分析}
+
+考虑由精确解$u(x)=e^{\sin x}$导出的混合边值问题
+\begin{equation}
+  \left\{
+    \begin{array}{l}
+      -u''(x) = (\sin x-\cos^2 x)e^{\sin x},\quad x\in\Omega \\
+      u(0)=1,\quad u'(1)=\cos 1\cdot e^{\sin 1}
+    \end{array}
+  \right. .
+\end{equation}
+
+我们用$n=512,1024,...,32768$的网格测试，使用FMG-Cycle，限制算子选择Full Operator，插值算子选择二次插值。当$n=512,...,4096$时，误差分布如下图所示。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.8\linewidth]{figure/1-3-1.eps}
+      \caption*{$n=512$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{figure/1-3-2.eps}
+    \caption*{$n=1024$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{figure/1-3-3.eps}
+    \caption*{$n=2048$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{figure/1-3-4.eps}
+    \caption*{$n=4096$}
+  \end{minipage}
+\end{figure}
+
+可以看到，格点越靠近Dirichlet条件下的边界，最终的计算误差越小。将数值解与真实解的误差用范数估计，并根据$n=16384$增加到$n=32768$时误差减小的倍数，估计各范数下的收敛阶，结果如下表。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc|c}
+  \textbf{$n$}        & 512                 & 1024                 & 2048                 & 4096                 & 8192                 & 16384                & 32768                & 收敛阶 \\ \hline
+  $||\cdot||_1$      & $2.99\times 10^{-6}$ & $7.46\times 10^{-7}$ & $1.87\times 10^{-7}$ & $4.67\times 10^{-8}$ & $1.17\times 10^{-8}$ & $2.91\times 10^{-9}$ & $7.37\times 10^{-10}$ & $1.984$\\
+  $||\cdot||_2$      & $3.41\times 10^{-6}$ & $8.53\times 10^{-7}$ & $2.13\times 10^{-7}$ & $5.33\times 10^{-8}$ & $1.33\times 10^{-8}$ & $3.33\times 10^{-9}$ & $8.42\times 10^{-10}$ & $1.984$\\
+  $||\cdot||_\infty$ & $5.72\times 10^{-6}$ & $1.43\times 10^{-6}$ & $3.58\times 10^{-7}$ & $8.94\times 10^{-8}$ & $2.24\times 10^{-8}$ & $5.59\times 10^{-9}$ & $1.41\times 10^{-9}$ & $1.985$
+  \end{tabular}
+\end{table}
+
+符合二阶收敛的理论结果。
+
+\subsection{V-Cycle 与 FMG-Cycle 的对比}
+
+本小节中，我们用Dirichlet边值问题(3.4)做测试。限制算子采用full-weighting，插值算子选择二次插值。
+
+以$n=2^{15}$的网格为例，采用V-Cycle，每一步迭代的误差分布如下图。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.9\linewidth]{figure/1-4-1.eps}
+      \caption*{\small Iter 1 \\ $||\text{err}||_\infty=0.016$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/1-4-2.eps}
+    \caption*{\small Iter 2 \\ $||\text{err}||_\infty=0.0001$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/1-4-3.eps}
+    \caption*{\small Iter 3 \\ $||\text{err}||_\infty=1.1\times 10^{-6}$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/1-4-4.eps}
+    \caption*{\small Iter 4 \\ $||\text{err}||_\infty=1.2\times 10^{-8}$}
+  \end{minipage}
+\end{figure}
+
+采用FMG-Cycle，只需一步迭代即可收敛到理论误差，误差分布如下图。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.9\linewidth]{figure/1-4-5.eps}
+      \caption*{\small Iter 1 \\ $||\text{err}||_\infty=4.7\times 10^{-11}$}
+  \end{minipage}
+\end{figure}
+
+我们使用不同大小的网格，取$n=2^{15},2^{16},2^{17},2^{18}$，用V-Cycle与FMG-Cycle分别迭代，达到理论误差即停。理论误差、迭代次数与求解时间如下表（误差均以无穷范数计）。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc}
+   $\mathbf{n}$      & $2^{15}$                   & $2^{16}$                   & $2^{17}$                  & $2^{18}$                    \\ \hline
+理论误差$(\leq)$   & $4.80\times 10^{-11}$ & $1.18\times 10^{-11}$ & $2.95\times 10^{-12}$ & $7.37\times 10^{-13}$ \\
+V-Cycle 迭代次数   & 7 & 7 & 8 & 7 \\
+FMG-Cycle 迭代次数   & 1 & 1 & 1 & 1 \\
+V-Cycle 耗时$(s)$  & 0.169 & 0.318 & 0.472 & 1.355 \\
+FMG-Cycle 耗时$(s)$ & 0.098 & 0.182 & 0.308 & 0.625 
+\end{tabular}
+\end{table}
+
+可以看出，FMG-Cycle只需一次迭代即可收敛。虽然V-Cycle的单次迭代比FMG-Cycle快，但需要的迭代次数太多。事实上，当$n$继续增大时，FMG-Cycle的快速收敛优势会更加明显，这里不再展示。
+
+\subsection{限制算子与插值算子的选择测试}
+
+本小节中，我们用Dirichlet边值问题(3.4)做测试。迭代方式选择FMG-Cycle，我们比较不同的限制算子与插值算子，设置如下四个实验组：
+\begin{enumerate}[(i)]
+  \item injection + 线性插值
+  \item full-weighting + 线性插值
+  \item injection + 二次插值
+  \item full-weighting + 二次插值
+\end{enumerate}
+
+事实上，不管是怎样的算子组合，都能达到$O(h^2)$的精度，因此最终都能收敛至二阶理论精度。但是二次插值的精度是$O(h^3)$，因此我们有理由相信使用二次插值具有较快的收敛速度。
+
+以$n=2^{15}$的网格为例，采用 injection + 线性插值 组合，每一步迭代的误差分布如下图。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.9\linewidth]{figure/1-5-1.eps}
+      \caption*{\small Iter 1 \\ $||\text{err}||_\infty=0.002$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/1-5-2.eps}
+    \caption*{\small Iter 2 \\ $||\text{err}||_\infty=7.8\times 10^{-5}$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/1-5-3.eps}
+    \caption*{\small Iter 3 \\ $||\text{err}||_\infty=3.0\times 10^{-6}$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/1-5-4.eps}
+    \caption*{\small Iter 4 \\ $||\text{err}||_\infty=1.2\times 10^{-7}$}
+  \end{minipage}
+\end{figure}
+
+采用 full-weighting + 线性插值 组合，每一步迭代的误差分布如下图。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.9\linewidth]{figure/1-5-5.eps}
+      \caption*{\small Iter 1 \\ $||\text{err}||_\infty=4.4\times 10^{-11}$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/1-5-6.eps}
+    \caption*{\small Iter 2 \\ $||\text{err}||_\infty=4.6\times 10^{-11}$}
+  \end{minipage}
+\end{figure}
+
+注意，上述第1步到第2步发生了误差增大。其实这是真实误差增大，方程组的求解误差仍在减小，并不能据此认为第1步的结果更好，第1步得到一个比较小的真实误差纯属巧合。
+
+采用 injection + 二次插值 组合，每一步迭代的误差分布如下图。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.9\linewidth]{figure/1-5-7.eps}
+      \caption*{\small Iter 1 \\ $||\text{err}||_\infty=2.8\times 10^{-10}$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/1-5-8.eps}
+    \caption*{\small Iter 2 \\ $||\text{err}||_\infty=1.2\times 10^{-10}$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/1-5-9.eps}
+    \caption*{\small Iter 3 \\ $||\text{err}||_\infty=7.3\times 10^{-12}$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/1-5-10.eps}
+    \caption*{\small Iter 4 \\ $||\text{err}||_\infty=8.6\times 10^{-11}$}
+  \end{minipage}
+\end{figure}
+
+采用 full-weighting + 二次插值 组合，一步迭代即可收敛，误差分布如下图。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.9\linewidth]{figure/1-5-11.eps}
+      \caption*{\small Iter 1 \\ $||\text{err}||_\infty=4.7\times 10^{-11}$}
+  \end{minipage}
+\end{figure}
+
+下面我们取$n=2^{15},...,2^{18}$的网格测试，记录各实验组达到理论误差所需的迭代次数，结果如下表。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc}
+   $\mathbf{n}$      & $2^{15}$                   & $2^{16}$                   & $2^{17}$                  & $2^{18}$                    \\ \hline
+理论误差$(\leq)$   & $4.80\times 10^{-11}$ & $1.18\times 10^{-11}$ & $2.95\times 10^{-12}$ & $7.37\times 10^{-13}$ \\
+injection + 线性插值 迭代次数        & 10 & 9 & 9 & 10 \\
+full-weighting + 线性插值 迭代次数   & 3  & 5 & 2 & 2 \\
+injection + 二次插值 迭代次数        & 6  & 4 & 2 & 3 \\
+full-weighting + 二次插值 迭代次数   & 1  & 1 & 1 & 1 \\
+\end{tabular}
+\end{table}
+
+由结果可见，所有组合最终都能收敛。其中 full-weighting + 二次插值 是收敛最快的组合，而 injection + 一次插值 是收敛最慢的组合。另外两个组合没有明显的优劣。
+
+\subsection{求解精度的极限测试}
+
+在这一节中，我们求解Dirichlet边值问题(3.4)，测试极限的求解精度。从$n=2^{16}$开始，采用最佳配置，即FMG-Cycle + full-weighting + 二次插值。测试结果如下：
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|cccccc}
+  \hline
+    \textbf{$n$}                 & $2^{16}$                 & $2^{17}$                 & $2^{18}$                 & $2^{19}$                & $2^{20}$                 & $2^{21}$              \\ \hline
+  $||\text{err}||_1$      & $7.58\times 10^{-12}$ & $1.90\times 10^{-12}$ & $4.74\times 10^{-13}$ & $1.18\times 10^{-13}$ & $2.97\times 10^{-14}$ & $7.54\times 10^{-15}$  \\
+  $||\text{err}||_\infty$      & $1.18\times 10^{-11}$ & $2.95\times 10^{-12}$ & $7.37\times 10^{-13}$ & $1.85\times 10^{-13}$ & $4.61\times 10^{-14}$ & $1.18\times 10^{-14}$  \\
+  求解时间（秒）                 & 0.214 & 0.402 & 0.813 & 1.957 & 4.444 & 9.488 \\ \hline 
+  \textbf{$n$}                 & $2^{22}$                 & $2^{23}$                 & $2^{24}$                 & $2^{25}$             \\ \hline
+  $||\text{err}||_1$      & $1.94\times 10^{-15}$ & $5.48\times 10^{-15}$ & $2.01\times 10^{-16}$ & $1.14\times 10^{-16}$ \\
+  $||\text{err}||_\infty$      & $3.11\times 10^{-15}$ & $1.11\times 10^{-15}$ & $4.44\times 10^{-16}$ & $4.44\times 10^{-16}$  \\
+  求解时间（秒）                 & 20.035 & 56.561 & 86.955 & 236.812 \\ \hline
+  \end{tabular}
+\end{table}
+
+我们可以发现，从$n=2^{22}$开始，网格变得巨大，求解时间开始肉眼可见地增长。我们最大的测试网格达到了$2^{25}$，求解精度接近\verb|double|的机器精度。但令人遗憾的是，也正是从$n=2^{22}$开始，网格每增大一倍，求解误差并不能下降到原先的$\frac{1}{4}$倍，这没有印证理论的二阶收敛。
+
+我们认为巨大网格下收敛阶数难以保持的主要原因是，当$n$足够大时，理论误差$O(h^2)$接近机器精度，由于浮点数运算的误差累积会对结果产生影响，这个影响放在$O(h^2)$尺度下就显得相当大，导致收敛阶无规律。
+
+\chapter{二维规则区域中的BVP}
+
+\section{设计要点}
+
+\subsection{二维区域的线性插值}
+
+我们将细网格上的点分为四种情况，分别插值：
+\begin{itemize}
+  \item 在粗网格格点上。此时直接等于粗网格点上的值。
+  \item 在粗网格的某条水平线上。此时该点值等与左右两粗网格格点值的平均。
+  \item 在粗网格的某条竖直线上。此时该点值等与上下两粗网格格点值的平均。
+  \item 不在粗网格线上。此时周围有四个粗网格格点，该点点值等于这四个粗网格格点值的平均。
+\end{itemize}
+
+\subsection{二维区域的二次插值}
+
+仍然将点分为四类。事实上，在粗网格线上的点可以使用一维的二次插值公式，唯一需要考虑的就是不在粗网格线上的点。考虑点$P_0=G^h(2i+1,2j+1)$，做一次二维二次插值需要六个点，取：
+\begin{align*}
+  P_1&=G^h(i,j) & P_2&=G^h(i,j+1) & P_3&=G^h(i,j+2)\\
+  P_4&=G^h(i+1,j) & P_5&=G^h(i+1,j+1) & P_6&=G^h(i+1,j+2)
+\end{align*}
+
+以这六个点的点值，通过待定系数法确定一个二维二次多项式$Q(x,y)=A+Bx+Cy+Dx^2+Exy+Fy^2$，再将$P_0$代入求得点值。结果为：
+\begin{equation*}
+  u(P_0)=\frac{1}{2}u(P_2)-\frac{1}{8}u(P_3)+\frac{1}{2}u(P_4)+\frac{1}{4}u(P_5)-\frac{1}{8}u(P_6).
+\end{equation*}
+
+这个形式不够对称，因此我们更换$P_1,...,P_6$的选取，重复上述过程三次，将每次得到的系数在各点上相加，并乘上$\frac{1}{4}$，得到对称的二次插值公式，各点插值系数如下图所示。
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.4\textwidth]{figure/2-1.eps}
+\end{figure}
+
+注意，上述对称的形式在边界附近会有越界问题，此时应该做特殊处理，牺牲一些对称性。
+
+\section{数值实验}
+
+\subsection{Dirichlet边值问题的求解、误差分析、收敛性分析}
+
+考虑由精确解$u(x,y)=e^{\sin x+y}$导出的Dirichlet边值问题
+\begin{equation}
+  \left\{
+    \begin{array}{l}
+      -\Delta u = -(1-\sin x+\cos^2 x)e^{\sin x + y},\quad x\in\Omega \\
+      u|_{\partial \Omega}=e^{\sin x + y}
+    \end{array}
+  \right. .
+\end{equation}
+
+我们用$n=16,32,64,128,256,512,1024$的网格测试，使用V-Cycle，限制算子选择Full Operator，插值算子选择线性插值。当$n=16,32,64,128$时，误差分布如下图所示。
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.95\linewidth]{figure/2-1-1.eps}
+      \caption*{$n=16$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/2-1-2.eps}
+    \caption*{$n=32$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/2-1-3.eps}
+    \caption*{$n=64$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/2-1-4.eps}
+    \caption*{$n=128$}
+  \end{minipage}
+\end{figure}
+
+可以看到，在Dirichlet条件下，格点越靠近边界，最终的计算误差越小。将数值解与真实解的误差用范数估计，并根据$n=512$增加到$n=1024$时误差减小的倍数，估计各范数下的收敛阶，结果如下表。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc|c}
+  \textbf{$n$}        & 16                   & 32                   & 64                   & 128                  & 256                  & 512                  & 1024                  & 收敛阶 \\ \hline
+  $||\cdot||_1$      & $5.13\times 10^{-5}$ & $1.37\times 10^{-5}$ & $3.54\times 10^{-6}$ & $8.98\times 10^{-7}$ & $2.26\times 10^{-7}$ & $5.68\times 10^{-8}$ & $1.42\times 10^{-8}$ & $2.000$\\
+  $||\cdot||_2$      & $6.71\times 10^{-5}$ & $1.73\times 10^{-5}$ & $4.40\times 10^{-6}$ & $1.11\times 10^{-6}$ & $2.78\times 10^{-7}$ & $6.97\times 10^{-8}$ & $1.74\times 10^{-8}$ & $2.002$\\
+  $||\cdot||_\infty$ & $1.38\times 10^{-4}$ & $3.45\times 10^{-5}$ & $8.62\times 10^{-6}$ & $2.16\times 10^{-6}$ & $5.39\times 10^{-7}$ & $1.35\times 10^{-7}$ & $3.37\times 10^{-8}$ & $1.997$
+  \end{tabular}
+\end{table}
+
+符合二阶收敛的理论结果。
+
+\subsection{Neumann边值问题的求解、误差分析、收敛性分析}
+
+考虑由精确解$u(x,y)=e^{\sin x+y}$导出的Neumann边值问题
+\begin{equation}
+  \left\{
+    \begin{array}{l}
+      -\Delta u = -(1-\sin x+\cos^2 x)e^{\sin x + y},\quad x\in\Omega, \\
+      \frac{\partial u}{\partial \mathbf{n}}|_{x=0}=-e^{y},\\
+      \frac{\partial u}{\partial \mathbf{n}}|_{x=1}=\cos 1 \cdot e^{\sin 1 + y},\\
+      \frac{\partial u}{\partial \mathbf{n}}|_{y=0}=-e^{\sin x},\\
+      \frac{\partial u}{\partial \mathbf{n}}|_{y=1}=e^{\sin x+1}
+    \end{array}
+  \right. .
+\end{equation}
+
+我们用$n=16,32,64,128,256,512,1024$的网格测试，使用V-Cycle，限制算子选择Full Operator，插值算子选择二次插值。当$n=16,32,64,128$时，误差分布如下图所示。
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.95\linewidth]{figure/2-2-1.eps}
+      \caption*{$n=16$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/2-2-2.eps}
+    \caption*{$n=32$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/2-2-3.eps}
+    \caption*{$n=64$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/2-2-4.eps}
+    \caption*{$n=128$}
+  \end{minipage}
+\end{figure}
+
+将数值解与真实解的误差用范数估计，并根据$n=512$增加到$n=1024$时误差减小的倍数，估计各范数下的收敛阶，结果如下表。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc|c}
+  \textbf{$n$}        & 16                   & 32                   & 64                   & 128                  & 256                  & 512                  & 1024                  & 收敛阶 \\ \hline
+  $||\cdot||_1$      & $1.36\times 10^{-3}$ & $3.26\times 10^{-4}$ & $7.99\times 10^{-5}$ & $1.98\times 10^{-5}$ & $4.92\times 10^{-6}$ & $1.22\times 10^{-6}$ & $3.06\times 10^{-7}$ & $1.995$\\
+  $||\cdot||_2$      & $1.62\times 10^{-3}$ & $3.91\times 10^{-4}$ & $9.58\times 10^{-5}$ & $2.37\times 10^{-5}$ & $5.90\times 10^{-6}$ & $1.47\times 10^{-6}$ & $3.67\times 10^{-7}$ & $2.002$\\
+  $||\cdot||_\infty$ & $3.36\times 10^{-3}$ & $8.28\times 10^{-4}$ & $2.06\times 10^{-4}$ & $5.12\times 10^{-5}$ & $1.28\times 10^{-5}$ & $3.19\times 10^{-6}$ & $7.97\times 10^{-7}$ & $2.001$
+  \end{tabular}
+\end{table}
+
+符合二阶收敛的理论结果。
+
+\subsection{混合边值问题的求解、误差分析、收敛性分析}
+
+考虑由精确解$u(x,y)=e^{\sin x+y}$导出的混合边值问题
+\begin{equation}
+  \left\{
+    \begin{array}{l}
+      -\Delta u = -(1-\sin x+\cos^2 x)e^{\sin x + y},\quad x\in\Omega, \\
+      u|_{x=0}=e^{y},\\
+      u|_{x=1}=e^{y+\sin 1},\\
+      \frac{\partial u}{\partial \mathbf{n}}|_{y=0}=-e^{\sin x},\\
+      \frac{\partial u}{\partial \mathbf{n}}|_{y=1}=e^{\sin x+1}
+    \end{array}
+  \right. .
+\end{equation}
+
+我们用$n=16,32,64,128,256,512,1024$的网格测试，使用FMG-Cycle，限制算子选择Injection，插值算子选择线性插值。当$n=16,32,64,128$时，误差分布如下图所示。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.8\linewidth]{figure/2-3-1.eps}
+      \caption*{$n=16$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{figure/2-3-2.eps}
+    \caption*{$n=32$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{figure/2-3-3.eps}
+    \caption*{$n=64$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{figure/2-3-4.eps}
+    \caption*{$n=128$}
+  \end{minipage}
+\end{figure}
+
+可以看到，越靠近Dirichlet条件的边界，求解误差越小，靠近Neumann边界的求解误差会比较大。
+
+将数值解与真实解的误差用范数估计，并根据$n=512$增加到$n=1024$时误差减小的倍数，估计各范数下的收敛阶，结果如下表。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc|c}
+  \textbf{$n$}        & 16                   & 32                   & 64                   & 128                  & 256                  & 512                  & 1024                  & 收敛阶 \\ \hline
+  $||\cdot||_1$      & $3.91\times 10^{-4}$ & $9.65\times 10^{-5}$ & $2.40\times 10^{-5}$ & $6.00\times 10^{-6}$ & $1.50\times 10^{-6}$ & $3.75\times 10^{-7}$ & $9.37\times 10^{-8}$ & $2.001$\\
+  $||\cdot||_2$      & $5.62\times 10^{-4}$ & $1.36\times 10^{-4}$ & $3.41\times 10^{-5}$ & $8.49\times 10^{-6}$ & $2.12\times 10^{-6}$ & $5.29\times 10^{-7}$ & $1.32\times 10^{-7}$ & $2.003$\\
+  $||\cdot||_\infty$ & $1.79\times 10^{-3}$ & $4.56\times 10^{-4}$ & $1.15\times 10^{-4}$ & $2.90\times 10^{-5}$ & $7.29\times 10^{-6}$ & $1.82\times 10^{-6}$ & $4.57\times 10^{-7}$ & $1.994$
+  \end{tabular}
+\end{table}
+
+符合二阶收敛的理论结果。
+
+\subsection{V-Cycle 与 FMG-Cycle 的对比}
+
+本小节中，我们用Dirichlet边值问题(4.1)做测试。限制算子采用injection，插值算子选择线性插值。
+
+以$n=64$的网格为例，采用V-Cycle，每两步迭代的误差分布如下图。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.8\linewidth]{figure/2-4-1.eps}
+      \caption*{Iter 2}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{figure/2-4-2.eps}
+    \caption*{Iter 4}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{figure/2-4-3.eps}
+    \caption*{Iter 6}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{figure/2-4-4.eps}
+    \caption*{Iter 8}
+  \end{minipage}
+\end{figure}
+
+采用FMG-Cycle，每两步迭代的误差分布如下图。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.8\linewidth]{figure/2-4-5.eps}
+      \caption*{Iter 2}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{figure/2-4-6.eps}
+    \caption*{Iter 4}
+\end{minipage}
+\end{figure}
+
+我们使用不同大小的网格，取$n=32,64,128,256,512$，用V-Cycle与FMG-Cycle分别迭代三次，误差与求解时间如下表（误差均以无穷范数计）。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc}
+   $\mathbf{n}$      & 32                   & 64                   & 128                  & 256                  & 512                 \\ \hline
+V-Cycle   & $1.50\times 10^{-2}$ & $2.16\times 10^{-2}$ & $2.95\times 10^{-2}$ & $3.88\times 10^{-2}$ & $4.97\times 10^{-2}$  \\
+FMG-Cycle   & $1.97\times 10^{-5}$ & $5.66\times 10^{-6}$ & $1.18\times 10^{-5}$ & $1.33\times 10^{-5}$ & $1.37\times 10^{-5}$  \\
+理论误差$(\leq)$   & $3.45\times 10^{-5}$ & $8.62\times 10^{-6}$ & $2.16\times 10^{-6}$ & $5.39\times 10^{-7}$ & $1.35\times 10^{-7}$\\
+V-Cycle 耗时$(s)$  & 0.008 & 0.017 & 0.066 & 0.211 & 0.802\\
+FMG-Cycle 耗时$(s)$ & 0.011 & 0.024 & 0.077 & 0.260 & 0.905
+\end{tabular}
+\end{table}
+
+可以发现，V-Cycle与FMG-Cycle迭代三次所需的时间相差无几，但是求解精度却天差地别。FMG-Cycle比V-Cycle要高效得多。
+
+\subsection{限制算子与插值算子的选择测试}
+
+本小节中，我们用Dirichlet边值问题(4.1)做测试。迭代方式选择V-Cycle，我们比较不同的限制算子与插值算子，设置如下四个实验组：
+\begin{enumerate}[(i)]
+  \item injection + 线性插值
+  \item full-weighting + 线性插值
+  \item injection + 二次插值
+  \item full-weighting + 二次插值
+\end{enumerate}
+
+以$n=64$网格为例，采用injection + 线性插值，每两步迭代的误差分布如下图。
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.22\linewidth}
+      \centering
+      \includegraphics[width=0.84\linewidth]{figure/2-5-1.eps}
+      \caption*{\small Iter 2 \\ $||\text{err}||_\infty=0.205$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.84\linewidth]{figure/2-5-2.eps}
+    \caption*{\small Iter 4 \\ $||\text{err}||_\infty=0.002$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.84\linewidth]{figure/2-5-3.eps}
+    \caption*{\small Iter 6 \\ $||\text{err}||_\infty=3.1\times 10^{-5}$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.84\linewidth]{figure/2-5-4.eps}
+    \caption*{\small Iter 8 \\ $||\text{err}||_\infty=8.8\times 10^{-6}$}
+  \end{minipage}
+\end{figure}
+
+采用full-weighting + 线性插值，每两步迭代的误差分布如下图。
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.22\linewidth}
+      \centering
+      \includegraphics[width=0.84\linewidth]{figure/2-5-5.eps}
+      \caption*{\small Iter 2 \\ $||\text{err}||_\infty=0.144$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.84\linewidth]{figure/2-5-6.eps}
+    \caption*{\small Iter 4 \\ $||\text{err}||_\infty=0.003$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.84\linewidth]{figure/2-5-7.eps}
+    \caption*{\small Iter 6 \\ $||\text{err}||_\infty=8.3\times 10^{-5}$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.84\linewidth]{figure/2-5-8.eps}
+    \caption*{\small Iter 8 \\ $||\text{err}||_\infty=1.1\times 10^{-5}$}
+  \end{minipage}
+\end{figure}
+
+采用injection + 二次插值，每两步迭代的误差分布如下图。
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.22\linewidth}
+      \centering
+      \includegraphics[width=0.84\linewidth]{figure/2-5-9.eps}
+      \caption*{\small Iter 2 \\ $||\text{err}||_\infty=0.042$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.84\linewidth]{figure/2-5-10.eps}
+    \caption*{\small Iter 4 \\ $||\text{err}||_\infty=5.6\times 10^{-4}$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.84\linewidth]{figure/2-5-11.eps}
+    \caption*{\small Iter 6 \\ $||\text{err}||_\infty=7.1\times 10^{-6}$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.84\linewidth]{figure/2-5-12.eps}
+    \caption*{\small Iter 8 \\ $||\text{err}||_\infty=8.6\times 10^{-6}$}
+  \end{minipage}
+\end{figure}
+
+注意，上述第6步到第8步发生了误差增大。其实这是真实误差增大，方程组的求解误差仍在减小，并不能据此认为第6步的结果更好，第6步得到一个比较小的真实误差纯属巧合。
+
+采用full-weighting + 二次插值，每一步迭代的误差分布如下图。
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.22\linewidth}
+      \centering
+      \includegraphics[width=0.84\linewidth]{figure/2-5-13.eps}
+      \caption*{\small Iter 2 \\ $||\text{err}||_\infty=0.040$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.84\linewidth]{figure/2-5-14.eps}
+    \caption*{\small Iter 4 \\ $||\text{err}||_\infty=1.6\times 10^{-4}$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.84\linewidth]{figure/2-5-15.eps}
+    \caption*{\small Iter 6 \\ $||\text{err}||_\infty=9.5\times 10^{-6}$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.84\linewidth]{figure/2-5-16.eps}
+    \caption*{\small Iter 8 \\ $||\text{err}||_\infty=8.6\times 10^{-6}$}
+  \end{minipage}
+\end{figure}
+
+我们使用不同大小的网格，取$n=32,64,128,256,512$，对每个实验组分别做六次V-Cycle迭代，结果的误差与理论误差如下表（均以无穷范数计）。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc}
+   $\mathbf{n}$       & 32                   & 64                   & 128                  & 256                  & 512                 \\ \hline
+injection+线性插值   & $4.74\times 10^{-5}$ & $3.05\times 10^{-5}$ & $3.69\times 10^{-5}$ & $5.30\times 10^{-5}$ & $7.70\times 10^{-5}$  \\
+full-weighting+线性插值   & $1.05\times 10^{-4}$ & $8.28\times 10^{-5}$ & $8.01\times 10^{-5}$ & $8.31\times 10^{-5}$ & $8.49\times 10^{-5}$  \\
+injection+二次插值   & $3.43\times 10^{-5}$ & $7.06\times 10^{-6}$ & $4.37\times 10^{-6}$ & $8.15\times 10^{-6}$ & $1.08\times 10^{-5}$  \\
+full-weighting+二次插值   & $3.52\times 10^{-5}$ & $9.51\times 10^{-6}$ & $3.07\times 10^{-6}$ & $1.48\times 10^{-6}$ & $1.09\times 10^{-6}$  \\
+理论误差$(\leq)$   & $3.45\times 10^{-5}$ & $8.62\times 10^{-6}$ & $2.16\times 10^{-6}$ & $5.39\times 10^{-7}$ & $1.35\times 10^{-7}$
+\end{tabular}
+\end{table}
+
+通过上述实验，我们比较出以下两条结论：
+\begin{enumerate}[(1)]
+  \item 采用二次插值的收敛速度比采用线性插值快；
+  \item 线性插值更适合搭配injection使用，二次插值更适合搭配full-weighting使用。
+\end{enumerate}
+
+事实上，通过多次迭代，无论何种算子组合都能达到理论精度。这是因为理论精度是$O(h^2)$，而即使是最低阶的线性插值，精度也已经是$O(h^2)$，二次插值的精度则是更高阶的$O(h^3)$。
+
+\subsection{多重网格与LU分解法的求解速度对比}
+
+这里，我们以Dirichlet边值问题(4.1)为例，将多重网格法与Poject 01中的LU分解法进行求解速度的对比。限制算子选择Full Operator，插值算子选择二次插值，求解精度如下表（均以$\infty$范数误差计）。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc}
+求解方法        & 16                   & 32                   & 64                   & 128                  & 256                  & 512                  & 1024                 \\ \hline
+V-Cycle        & $1.38\times 10^{-4}$ & $3.45\times 10^{-5}$ & $8.62\times 10^{-6}$ & $2.16\times 10^{-6}$ & $5.39\times 10^{-7}$ & $1.35\times 10^{-7}$ & $3.37\times 10^{-8}$  \\
+FMG-Cycle      & $1.38\times 10^{-4}$ & $3.45\times 10^{-5}$ & $8.62\times 10^{-6}$ & $2.16\times 10^{-6}$ & $5.39\times 10^{-7}$ & $1.35\times 10^{-7}$ & $3.37\times 10^{-8}$  \\
+LU分解         & $1.22\times 10^{-4}$ & $3.24\times 10^{-5}$ & $8.36\times 10^{-6}$ & $2.12\times 10^{-6}$ & - & - & - 
+\end{tabular}
+\end{table}
+
+可以看到，LU分解的求解精度略高于多重网格，这是合理的。求解耗时如下表（单位：秒）。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc|c}
+求解方法        & 16                   & 32                   & 64                   & 128                  & 256                  & 512                  & 1024                & 增长阶数 \\ \hline
+V-Cycle        & 0.005 & 0.011 & 0.036 & 0.105 & 0.376 & 1.440 &  6.934 & 2.268  \\
+FMG-Cycle      & 0.002 & 0.015 & 0.025 & 0.090 & 0.351 & 1.182 &  3.835 & 1.698 \\
+LU分解         & 0.002 & 0.022 & 0.42 & 8.168 & - & - & - & 4.281
+\end{tabular}
+\end{table}
+
+根据理论结果，二维情形下，多重网格法的复杂度为$O(n^2)$，经过稀疏矩阵优化的LU分解法的复杂度为$O(n^4)$，考虑到算法具有固定的常数，上述实验结果符合理论。
+
+\section{理论分析}
+
+\chapter{二维不规则区域中的BVP}
+
+在本节中，我们求解区域$\Omega=\{(x,y):x\in(0,1),y\in(D(x),1)\}$中的Poisson方程，其中$D(x)=\frac{1}{16}\sin(\pi x).$
+
+\section{设计要点}
+
+\subsection{扭曲网格简介}
+
+对于不规则区域的方程求解，我们想出了三种思路：
+
+\begin{itemize}
+  \item 添加不规则点，增加额外的方程，与Project 01类似。这个方法的问题在于添加的方程过于不规则，严重破坏矩阵的性质，导致Jacobi迭代发散。
+  \item 坐标变换。将不规则区域的方程变换到规则区域求解，再将结果映射回不规则区域。这是一个建设性的想法，但是我们没有选择它。
+  \item 扭曲网格。将整个网格沿着不规则区域的形状扭曲，如下图所示，这就是我们的方法。
+\end{itemize}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.4\textwidth]{figure/3-1.eps}
+  \caption{扭曲网格示意图}
+\end{figure}
+
+在宽度为$h=\frac{1}{n}$的扭曲网格中，网格点$G^h(i,j)$的实际坐标为：
+\begin{equation*}
+  G^h(i,j)=(ih,\;D(ih)+jh(1-D(ih)))
+\end{equation*}
+
+\subsection{扭曲网格中的Laplace方程}
+
+在规则网格中，我们可以通过上下左右四个点，给出Laplace方程的离散格式。在扭曲网格中，由于左右两个格点不在同一水平线上，因此二阶泰勒展开会存在$xy$交叉项。为将其消去，我们需要一个额外的的点。具体而言，记
+\begin{align*}
+  P_0&=G^h(i,j) & P_1&=G^h(i,j+1) & P_2&=G^h(i,j-1)\\
+  P_3&=G^h(i+1,j) & P_4&=G^h(i-1,j) & P_5&=G^h(i+1,j+1)
+\end{align*}
+
+对于$i=0,...,5$，我们记$P_i=(x_i,y_i)$，将$P_i$处的点值在$P_0$处做二阶Taylor展开：
+\begin{align*}
+  u(P_i)&=u(P_0)+(x_i-x_0)\frac{\partial u}{\partial x}(P_0)+(y_i-y_0)\frac{\partial u}{\partial y}(P_0)
+  +\frac{1}{2}(x_i-x_0)^2\frac{\partial^2 u}{\partial x^2}(P_0) \\
+  & +\frac{1}{2}(y_i-y_0)^2\frac{\partial^2 u}{\partial y^2}(P_0)
+  +(x_i-x_0)(y_i-y_0)\frac{\partial^2 u}{\partial x \partial y}(P_0)+O(h^3).
+\end{align*}
+
+列出六元一次方程组，解出系数$A_0,...,A_6$，使得
+\begin{equation*}
+  \sum_{i=0}^6 A_iu(P_i)=-\Delta u(P_0)+O(h)
+\end{equation*}
+
+这样列出的方程不够美观。因此我们更换$P_5$的选取，分别选择$G^h(i+1,j-1),G^h(i-1,j+1),G^h(i-1,j-1)$重复上述过程，一共求得四组系数，将各组系数在对应点处相加，再乘以$\frac{1}{4}$，即可得到更加对称的离散化Laplace方程。特别地，在靠近边界的格点处，上述过程会存在越界风险，因此需要视格点位置做特殊处理。
+
+以$n=32,i=4,j=6$为例，通过上述方法求得的各点系数如下图所示，可以看到大体上与规则网格类似。
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.4\textwidth]{figure/3-2.eps}
+\end{figure}
+
+\subsection{扭曲网格中的Neumann边值条件方程}
+
+\subsubsection{$x=0$与$x=1$边界}
+
+这里仅以$x=0$边界为例，$x=1$边界是完全对称的。在规则网格中，对于$(0,jh)$处的法向导数，只需要$U_{0,j},U_{1,j},U_{2,j}$三个点值，即可得到二阶估计。但是在扭曲网格中，这三点之间存在$y$方向的偏移，因此二阶Taylor展式中存在$y,y^2,xy$项，这就需要额外的三个点来消除。与Laplace方程的方法完全类似，选取六个点：
+\begin{align*}
+  P_0&=G^h(0,j) & P_1&=G^h(1,j) & P_2&=G^h(2,j)\\
+  P_3&=G^h(0,j-1) & P_4&=G^h(0,j+1) & P_5&=G^h(1,j+1).
+\end{align*}
+
+对于$i=0,...,5$，我们记$P_i=(x_i,y_i)$，将$P_i$处的点值在$P_0$处做二阶Taylor展开：
+\begin{align*}
+  u(P_i)&=u(P_0)+(x_i-x_0)\frac{\partial u}{\partial x}(P_0)+(y_i-y_0)\frac{\partial u}{\partial y}(P_0)
+  +\frac{1}{2}(x_i-x_0)^2\frac{\partial^2 u}{\partial x^2}(P_0) \\
+  & +\frac{1}{2}(y_i-y_0)^2\frac{\partial^2 u}{\partial y^2}(P_0)
+  +(x_i-x_0)(y_i-y_0)\frac{\partial^2 u}{\partial x \partial y}(P_0)+O(h^3).
+\end{align*}
+
+列出六元一次方程组，解出系数$A_0,...,A_6$，使得
+\begin{equation*}
+  \sum_{i=0}^6 A_iu(P_i)=-u_x(P_0)+O(h^2)
+\end{equation*}
+
+为使方程更加对称，我们更换$P_5$的选取，取$P_5=G^h(1,j-1)$，重复上述过程，得到另一组系数，将各组系数在对应点处相加，再乘以$\frac{1}{2}$，即可得到更加对称的Neumann边界条件方程。特别地，在靠近上下边界的格点处，上述过程会存在越界风险，因此需要视格点位置做特殊处理。
+
+以$n=32,j=6$为例，通过上述方法求得的各点系数如下图所示，可以看到大体上与规则网格类似。
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.35\textwidth]{figure/3-3.eps}
+\end{figure}
+
+\subsubsection{$y=1$边界}
+
+我们记$h_i=\frac{1}{n}(1-D(ih))$，表示扭曲网格在$x=ih$列中的纵向间隔，那么根据二阶Taylor展开，有：
+\begin{equation*}
+  \frac{\partial u}{\partial y}(ih,1) = \frac{1}{2h_i}(3U_{i,n}-4U_{i,n-1}+U_{i,n-2})+O(h_i^2).
+\end{equation*}
+
+\subsubsection{下边界}
+
+在$x=ih$处，下边界的法向量$\mathbf{n}$为：
+\begin{equation}
+  \mathbf{n}=\frac{1}{\sqrt{\frac{\pi^2}{256}\cos^2(\pi x)+1}}\left(\frac{\pi}{16}\cos(\pi x),1\right)
+\end{equation}
+
+仍利用二阶Taylor展开，选取六个点：
+\begin{align*}
+  P_0&=G^h(i,0) & P_1&=G^h(i,1) & P_2&=G^h(i,2)\\
+  P_3&=G^h(i-1,0) & P_4&=G^h(i+1,0) & P_5&=G^h(i-1,1).
+\end{align*}
+
+对于$i=0,...,5$，我们记$P_i=(x_i,y_i)$，将$P_i$处的点值在$P_0$处做二阶Taylor展开：
+\begin{align*}
+  u(P_i)&=u(P_0)+(x_i-x_0)\frac{\partial u}{\partial x}(P_0)+(y_i-y_0)\frac{\partial u}{\partial y}(P_0)
+  +\frac{1}{2}(x_i-x_0)^2\frac{\partial^2 u}{\partial x^2}(P_0) \\
+  & +\frac{1}{2}(y_i-y_0)^2\frac{\partial^2 u}{\partial y^2}(P_0)
+  +(x_i-x_0)(y_i-y_0)\frac{\partial^2 u}{\partial x \partial y}(P_0)+O(h^3).
+\end{align*}
+
+列出六元一次方程组，解出系数$A_0,...,A_5$，使得
+\begin{equation*}
+  \sum_{i=0}^5 A_iu(P_i)=\frac{\partial u}{\partial \mathbf{n}}(P_0)+O(h^2)
+\end{equation*}
+
+为使方程更加对称，我们更换$P_5$的选取，取$P_5=G^h(i+1,1)$，重复上述过程，得到另一组系数，将各组系数在对应点处相加，再乘以$\frac{1}{2}$，即可得到更加对称的Neumann边界条件方程。特别地，在靠近上下边界的格点处，上述过程会存在越界风险，因此需要视格点位置做特殊处理。
+
+以$n=32,i=4$为例，通过上述方法求得的各点系数如下图所示，可以看到大体上与规则网格相近。
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.4\textwidth]{figure/3-4.eps}
+\end{figure}
+
+\subsection{扭曲网格中的线性插值}
+
+对于一个细网格上的点，它的位置可能有四种情况：在粗网格点上、在粗网格的某条竖直线上、在粗网格的某条水平线上、不在粗网格线上。对于前两种情况，我们的处理方式与规则网格一样。对于第三种情况，因为扭曲网格的格点与左右两格点并不在同一直线上，因此需要引入第三点做线性插值。
+
+我们只介绍不在粗网格线上点如何插值。考虑点$P_0=G^h(2i+1,2j+1)$，选取粗网格上三个点：
+\begin{align*}
+  P_1&=G^{2h}(i,j) & P_1&=G^{2h}(i,j+1) & P_2&=G^{2h}(i+1,j)
+\end{align*}
+
+对于$i=0,...,3$，我们记$P_i=(x_i,y_i)$，将$P_i$处的点值在$P_0$处做一阶Taylor展开：
+\begin{align*}
+  u(P_i)&=u(P_0)+(x_i-x_0)\frac{\partial u}{\partial x}(P_0)+(y_i-y_0)\frac{\partial u}{\partial y}(P_0)
+  +\frac{1}{2}(x_i-x_0)^2\frac{\partial^2 u}{\partial x^2}(P_0) + O(h^2).
+\end{align*}
+
+列出三元一次方程组，解出系数$A_1,...,A_3$，使得
+\begin{equation*}
+  \sum_{i=1}^3 A_iu(P_i)=u(P_0)+O(h^2)
+\end{equation*}
+
+为了使插值系数更加对称，我们重新选取$P_1,P_2,P_3$，每次在$P_0$周围的四个粗网格点上取三个点做上述过程，取遍所有可能，一共四次。将每次得到的系数在各点处相加并乘$\frac{1}{4}$，即可得到更加对称的线性插值方程。
+
+以$n=32,i=5,j=7$为例，各点插值系数如下图所示，与规则网格的插值系数只相差大约$0.001$.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.4\textwidth]{figure/3-5.eps}
+\end{figure}
+
+\subsection{扭曲网格中的二次插值}
+
+这里以$P_0=G^{h}(2i+1,2j+1)$的二次插值为例讲解思路，不在赘述网格线上的点与边界附近点的特殊讨论。
+
+选取粗网格上六个点：
+\begin{align*}
+  P_1&=G^{2h}(i,j) & P_2&=G^{2h}(i,j+1) & P_3&=G^{2h}(i+1,j)\\
+  P_4&=G^{2h}(i+1,j+1) & P_5&=G^{2h}(i,j+2) & P_6&=G^{2h}(i+2,j)
+\end{align*}
+
+对于$i=0,...,6$，我们记$P_i=(x_i,y_i)$，将$P_i$处的点值在$P_0$处做二阶Taylor展开：
+\begin{align*}
+  u(P_i)&=u(P_0)+(x_i-x_0)\frac{\partial u}{\partial x}(P_0)+(y_i-y_0)\frac{\partial u}{\partial y}(P_0)
+  +\frac{1}{2}(x_i-x_0)^2\frac{\partial^2 u}{\partial x^2}(P_0) \\
+  & +\frac{1}{2}(y_i-y_0)^2\frac{\partial^2 u}{\partial y^2}(P_0)
+  +(x_i-x_0)(y_i-y_0)\frac{\partial^2 u}{\partial x \partial y}(P_0)+O(h^3).
+\end{align*}
+
+列出六元一次方程组，解出系数$A_1,...,A_6$，使得
+\begin{equation*}
+  \sum_{i=1}^6 A_iu(P_i)=u(P_0)+O(h^3)
+\end{equation*}
+
+为了使插值系数更加对称，我们重新选取$P_5,P_6$：
+\begin{enumerate}
+  \item $P_5=G^{2h}(i+2,j+1),\;P_6=G^{2h}(i,j-1)$;
+  \item $P_5=G^{2h}(i+1,j-1),\;P_6=G^{2h}(i-1,j+1)$;
+  \item $P_5=G^{2h}(i-1,j),\;P_6=G^{2h}(i+1,j+2)$.
+\end{enumerate}
+
+重新选取$P_5,P_6$后重复上述过程。一共四次。将每次得到的系数在各点处相加并乘$\frac{1}{4}$，即可得到更加对称的二次插值方程。
+
+这里不再举例展示各点插值系数，经过实际测试，与规则网格的插值系数只相差大约$0.001$。因此，虽然我们特意实现了扭曲网格的线性插值、二次插值，我们却认为实现这些并不是必要的，直接使用规则网格的线性插值、二次插值就可以达到足够高的近似度。
+
+\section{数值实验}
+
+\subsection{Dirichlet边值问题的求解、误差分析、收敛性分析}
+
+考虑由精确解$u(x,y)=e^{\sin x+y}$导出的Dirichlet边值问题
+\begin{equation}
+  \left\{
+    \begin{array}{l}
+      -\Delta u = -(1-\sin x+\cos^2 x)e^{\sin x + y},\quad x\in\Omega \\
+      u|_{\partial \Omega}=e^{\sin x + y}
+    \end{array}
+  \right. .
+\end{equation}
+
+我们用$n=16,32,64,128,256,512,1024$的网格测试，使用V-Cycle，限制算子选择Full Operator，插值算子选择线性插值。当$n=16,32,64,128$时，误差分布如下图所示。
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.95\linewidth]{figure/3-1-1.eps}
+      \caption*{$n=16$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/3-1-2.eps}
+    \caption*{$n=32$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/3-1-3.eps}
+    \caption*{$n=64$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/3-1-4.eps}
+    \caption*{$n=128$}
+  \end{minipage}
+\end{figure}
+
+可以看到，在Dirichlet条件下，格点越靠近边界，最终的计算误差越小。将数值解与真实解的误差用范数估计，并根据$n=512$增加到$n=1024$时误差减小的倍数，估计各范数下的收敛阶，结果如下表。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc|c}
+  \textbf{$n$}        & 16                   & 32                   & 64                   & 128                  & 256                  & 512                  & 1024                  & 收敛阶 \\ \hline
+  $||\cdot||_1$      & $4.83\times 10^{-5}$ & $1.29\times 10^{-5}$ & $3.35\times 10^{-6}$ & $8.72\times 10^{-7}$ & $2.40\times 10^{-7}$ & $5.42\times 10^{-8}$ & $1.41\times 10^{-8}$ & $1.944$\\
+  $||\cdot||_2$      & $6.55\times 10^{-5}$ & $1.69\times 10^{-5}$ & $4.31\times 10^{-6}$ & $1.11\times 10^{-6}$ & $2.99\times 10^{-7}$ & $6.86\times 10^{-8}$ & $1.77\times 10^{-8}$ & $1.952$\\
+  $||\cdot||_\infty$ & $1.39\times 10^{-4}$ & $3.49\times 10^{-5}$ & $8.77\times 10^{-6}$ & $2.23\times 10^{-6}$ & $5.96\times 10^{-7}$ & $1.38\times 10^{-7}$ & $3.54\times 10^{-8}$ & $1.958$
+  \end{tabular}
+\end{table}
+
+大致呈二阶收敛。
+
+\subsection{Neumann边值问题的求解、误差分析、收敛性分析}
+
+考虑由精确解$u(x,y)=e^{\sin x+y}$导出的Neumann边值问题
+\begin{equation}
+  \left\{
+    \begin{array}{l}
+      -\Delta u = -(1-\sin x+\cos^2 x)e^{\sin x + y},\quad x\in\Omega, \\
+      \frac{\partial u}{\partial \mathbf{n}}|_{x=0}=-e^{y},\\
+      \frac{\partial u}{\partial \mathbf{n}}|_{x=1}=\cos 1 \cdot e^{\sin 1 + y},\\
+      \frac{\partial u}{\partial \mathbf{n}}|_{y=D(x)}=\cos x\cdot e^{\sin x + y} \cdot \mathbf{n}_x + e^{\sin x + y} \cdot \mathbf{n}_y,\\
+      \frac{\partial u}{\partial \mathbf{n}}|_{y=1}=e^{\sin x+1}
+    \end{array}
+  \right. .
+\end{equation}
+
+其中$\mathbf{n}$的表达式见5.1.3小节中的式(5.1)。
+
+我们用$n=16,32,64,128,256,512,1024$的网格测试，使用V-Cycle，限制算子选择Full Operator，插值算子选择二次插值。当$n=16,32,64,128$时，误差分布如下图所示。
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.95\linewidth]{figure/3-2-1.eps}
+      \caption*{$n=16$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/3-2-2.eps}
+    \caption*{$n=32$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/3-2-3.eps}
+    \caption*{$n=64$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/3-2-4.eps}
+    \caption*{$n=128$}
+  \end{minipage}
+\end{figure}
+
+将数值解与真实解的误差用范数估计，并根据$n=512$增加到$n=1024$时误差减小的倍数，估计各范数下的收敛阶，结果如下表。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc|c}
+  \textbf{$n$}        & 16                   & 32                   & 64                   & 128                  & 256                  & 512                  & 1024                  & 收敛阶 \\ \hline
+  $||\cdot||_1$      & $1.23\times 10^{-3}$ & $2.92\times 10^{-4}$ & $7.11\times 10^{-5}$ & $1.76\times 10^{-5}$ & $4.36\times 10^{-6}$ & $1.09\times 10^{-6}$ & $2.72\times 10^{-7}$ & $2.001$\\
+  $||\cdot||_2$      & $1.49\times 10^{-3}$ & $3.55\times 10^{-4}$ & $8.65\times 10^{-5}$ & $2.14\times 10^{-5}$ & $5.31\times 10^{-6}$ & $1.32\times 10^{-6}$ & $3.31\times 10^{-7}$ & $2.001$\\
+  $||\cdot||_\infty$ & $3.21\times 10^{-3}$ & $7.87\times 10^{-4}$ & $1.95\times 10^{-4}$ & $4.84\times 10^{-5}$ & $1.21\times 10^{-5}$ & $3.02\times 10^{-6}$ & $7.54\times 10^{-7}$ & $2.000$
+  \end{tabular}
+\end{table}
+
+大致呈二阶收敛。
+
+\subsection{混合边值问题的求解、误差分析、收敛性分析}
+
+考虑由精确解$u(x,y)=e^{\sin x+y}$导出的混合边值问题
+\begin{equation}
+  \left\{
+    \begin{array}{l}
+      -\Delta u = -(1-\sin x+\cos^2 x)e^{\sin x + y},\quad x\in\Omega, \\
+      u|_{x=0}=e^{y},\\
+      u|_{x=1}=e^{y+\sin 1},\\
+      \frac{\partial u}{\partial \mathbf{n}}|_{y=D(x)}=\cos x\cdot e^{\sin x + y} \cdot \mathbf{n}_x + e^{\sin x + y} \cdot \mathbf{n}_y,\\
+      \frac{\partial u}{\partial \mathbf{n}}|_{y=1}=e^{\sin x+1}
+    \end{array}
+  \right. .
+\end{equation}
+
+其中$\mathbf{n}$的表达式见5.1.3小节中的式(5.1)。
+
+我们用$n=16,32,64,128,256,512,1024$的网格测试，使用FMG-Cycle，限制算子选择Injection，插值算子选择线性插值。当$n=16,32,64,128$时，误差分布如下图所示。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.95\linewidth]{figure/3-3-1.eps}
+      \caption*{$n=16$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/3-3-2.eps}
+    \caption*{$n=32$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/3-3-3.eps}
+    \caption*{$n=64$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{figure/3-3-4.eps}
+    \caption*{$n=128$}
+  \end{minipage}
+\end{figure}
+
+可以看到，越靠近Dirichlet条件的边界，求解误差越小，靠近Neumann边界的求解误差会比较大。且误差分布图的形状与4.2.3节中规则网格的结果大致相似。
+
+将数值解与真实解的误差用范数估计，并根据$n=512$增加到$n=1024$时误差减小的倍数，估计各范数下的收敛阶，结果如下表。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc|c}
+  \textbf{$n$}        & 16                   & 32                   & 64                   & 128                  & 256                  & 512                  & 1024                  & 收敛阶 \\ \hline
+  $||\cdot||_1$      & $3.54\times 10^{-4}$ & $8.74\times 10^{-5}$ & $2.18\times 10^{-5}$ & $5.44\times 10^{-6}$ & $1.36\times 10^{-6}$ & $3.41\times 10^{-7}$ & $8.59\times 10^{-8}$ & $1.990$\\
+  $||\cdot||_2$      & $5.05\times 10^{-4}$ & $1.23\times 10^{-4}$ & $3.06\times 10^{-5}$ & $7.64\times 10^{-6}$ & $1.91\times 10^{-6}$ & $4.79\times 10^{-7}$ & $1.21\times 10^{-7}$ & $1.986$\\
+  $||\cdot||_\infty$ & $1.58\times 10^{-3}$ & $4.04\times 10^{-4}$ & $1.02\times 10^{-4}$ & $2.57\times 10^{-5}$ & $6.46\times 10^{-6}$ & $1.63\times 10^{-6}$ & $4.11\times 10^{-7}$ & $1.984$
+  \end{tabular}
+\end{table}
+
+大致呈二阶收敛。
+
+\subsection{V-Cycle 与 FMG-Cycle 的对比}
+
+本小节中，我们用Dirichlet边值问题(5.2)做测试。限制算子采用full-weighting，插值算子选择二次插值。
+
+以$n=2^5$的网格为例，采用V-Cycle，每一步迭代的误差分布如下图。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.9\linewidth]{figure/3-4-1.eps}
+      \caption*{\small Iter 1 \\ $||\text{err}||_\infty=0.607$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/3-4-2.eps}
+    \caption*{\small Iter 2 \\ $||\text{err}||_\infty=0.0378$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/3-4-3.eps}
+    \caption*{\small Iter 3 \\ $||\text{err}||_\infty=0.0035$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/3-4-4.eps}
+    \caption*{\small Iter 4 \\ $||\text{err}||_\infty=3.8\times 10^{-4}$}
+  \end{minipage}
+\end{figure}
+
+采用FMG-Cycle，只需两三步迭代即可收敛到理论误差，误差分布如下图。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.9\linewidth]{figure/3-4-5.eps}
+      \caption*{\small Iter 1 \\ $||\text{err}||_1.0\times 10^{-4}$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/3-4-6.eps}
+    \caption*{\small Iter 2 \\ $||\text{err}||_\infty=3.5\times 10^{-5}$}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/3-4-7.eps}
+    \caption*{\small Iter 3 \\ $||\text{err}||_\infty=3.5\times 10^{-5}$}
+  \end{minipage}
+\end{figure}
+
+我们使用不同大小的网格，取$n=2^{5},...,2^{10}$，用V-Cycle与FMG-Cycle分别迭代，方程组求解误差达到$10^{-8}$即停。理论误差、迭代次数与求解时间如下表（误差均以无穷范数计）。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc}
+   $\mathbf{n}$      & $2^{5}$                   & $2^{6}$                   & $2^{7}$                  & $2^{8}$     & $2^{9}$       & $2^{10}$        \\ \hline
+理论误差$(\leq)$   & $3.49\times 10^{-5}$ & $8.77\times 10^{-6}$ & $2.23\times 10^{-6}$ & $5.96\times 10^{-7}$ & $1.38\times 10^{-7}$ & $3.54\times 10^{-8}$ \\
+V-Cycle 迭代次数   & 10 & 10 & 10 & 10 & 10 & 10\\
+FMG-Cycle 迭代次数   & 6 & 5 & 5 & 4 & 4 & 3\\
+V-Cycle 耗时$(s)$  & 0.039 & 0.138 & 0.511 & 1.877 & 8.2 & 33.268\\
+FMG-Cycle 耗时$(s)$ & 0.05 & 0.139 & 0.521 & 1.629 & 7.025 & 23.334
+\end{tabular}
+\end{table}
+
+可以看出，FMG-Cycle所需的迭代次数普遍较少。虽然V-Cycle的单次迭代比FMG-Cycle快，但需要的迭代次数太多。当$n$较大时，FMG-Cycle的迭代次数少的优势逐渐显现。
+
+\subsection{限制算子与插值算子的选择测试}
+
+本小节中，我们用Dirichlet边值问题(5.2)做测试。迭代方式选择FMG-Cycle，我们比较不同的限制算子与插值算子，设置如下四个实验组：
+\begin{enumerate}[(i)]
+  \item injection + 线性插值
+  \item full-weighting + 线性插值
+  \item injection + 二次插值
+  \item full-weighting + 二次插值
+\end{enumerate}
+
+以$n=2^{5}$的网格为例，采用 injection + 线性插值 组合，每一步迭代的误差分布如下图。
+
+\end{document}

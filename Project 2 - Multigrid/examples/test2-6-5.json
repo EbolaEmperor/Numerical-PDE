@@ -1,0 +1,15 @@
+{
+    "Condition Type": "Dirichlet",
+    "Dimension": 2,
+    "Reigeon Type": "Regular",
+    "Grid Size": 256,
+    "f": "-(1-sin(x)+cos(x)*cos(x))*exp(sin(x)+y)",
+    "g": "exp(sin(x)+y)",
+    "Cycle Type": "FMG",
+    "Restriction": "full operator",
+    "Prolongation": "quadradic",
+    "Max Iter": 10,
+    "eps": 1e-8,
+    "Error Check": true,
+    "u": "exp(sin(x)+y)"
+}

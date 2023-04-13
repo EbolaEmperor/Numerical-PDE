@@ -1,0 +1,17 @@
+{
+    "Condition Type": "mixed",
+    "Dimension": 1,
+    "Grid Size": 512,
+    "f": "(sin(x)-cos(x)*cos(x))*exp(sin(x))",
+    "g": {
+        "x=0": ["1", "Dirichlet"],
+        "x=1": ["cos(1)*exp(sin(1))", "Neumann"]
+    },
+    "Cycle Type": "FMG",
+    "Max Iter": 5,
+    "eps": 1e-15,
+    "Restriction": "full operator",
+    "Prolongation": "quadradic",
+    "Error Check": true,
+    "u": "exp(sin(x))"
+}
