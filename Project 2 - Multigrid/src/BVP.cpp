@@ -370,6 +370,8 @@ void BVP::solve(){
 
     cout << "----------------------------------------------------------" << endl;
     cout << "Method: " << problem["Cycle Type"].asString() << "-Cycle" << endl;
+    cout << "Restriction: " << problem["Restriction"].asString() << endl;
+    cout << "Prolongation: " << problem["Prolongation"].asString() << endl;
     cout << "Prepareing solver..." << endl;
 
     int cur = clock();

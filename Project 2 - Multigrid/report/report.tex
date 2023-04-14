@@ -1037,7 +1037,7 @@ FMG-Cycle 耗时$(s)$ & 0.011 & 0.024 & 0.077 & 0.260 & 0.905
 
 注意，上述第6步到第8步发生了误差增大。其实这是真实误差增大，方程组的求解误差仍在减小，并不能据此认为第6步的结果更好，第6步得到一个比较小的真实误差纯属巧合。
 
-采用full-weighting + 二次插值，每一步迭代的误差分布如下图。
+采用full-weighting + 二次插值，每两步迭代的误差分布如下图。
 \begin{figure}[H]
   \centering
   \begin{minipage}[t]{0.22\linewidth}
@@ -1248,7 +1248,7 @@ LU分解         & 0.002 & 0.022 & 0.42 & 8.168 & - & - & - & 4.281
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.4\textwidth]{figure/3-4.eps}
+  \includegraphics[width=0.3\textwidth]{figure/3-4.eps}
 \end{figure}
 
 \subsection{扭曲网格中的线性插值}
@@ -1276,8 +1276,10 @@ LU分解         & 0.002 & 0.022 & 0.42 & 8.168 & - & - & - & 4.281
 以$n=32,i=5,j=7$为例，各点插值系数如下图所示，与规则网格的插值系数只相差大约$0.001$.
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.4\textwidth]{figure/3-5.eps}
+  \includegraphics[width=0.35\textwidth]{figure/3-5.eps}
 \end{figure}
+
+在最早先版本的代码中，我们实现了不规则网格的线性插值（见gitee用户Wenchong Huang在4月14日凌晨0点14分的commit），当时我们并没有发现插值系数与规则网格如此相近。意识到这个情况后，在最终版本的代码中，出于计算性能考虑，我们选择直接使用规则网格的线性插值作为近似。
 
 \subsection{扭曲网格中的二次插值}
 
@@ -1311,7 +1313,7 @@ LU分解         & 0.002 & 0.022 & 0.42 & 8.168 & - & - & - & 4.281
 
 重新选取$P_5,P_6$后重复上述过程。一共四次。将每次得到的系数在各点处相加并乘$\frac{1}{4}$，即可得到更加对称的二次插值方程。
 
-这里不再举例展示各点插值系数，经过实际测试，与规则网格的插值系数只相差大约$0.001$。因此，虽然我们特意实现了扭曲网格的线性插值、二次插值，我们却认为实现这些并不是必要的，直接使用规则网格的线性插值、二次插值就可以达到足够高的近似度。
+这里不再举例展示各点插值系数，经过实际测试，与规则网格的插值系数只相差大约$0.001$。在最早先版本的代码中，我们实现了不规则网格的二次插值（见gitee用户Wenchong Huang在4月14日凌晨0点14分的commit），当时我们并没有发现插值系数与规则网格如此相近。意识到这个情况后，在最终版本的代码中，出于计算性能考虑，我们选择直接使用规则网格的二次插值作为近似。
 
 \section{数值实验}
 
@@ -1563,5 +1565,120 @@ FMG-Cycle 耗时$(s)$ & 0.05 & 0.139 & 0.521 & 1.629 & 7.025 & 23.334
 \end{enumerate}
 
 以$n=2^{5}$的网格为例，采用 injection + 线性插值 组合，每一步迭代的误差分布如下图。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.22\linewidth}
+      \centering
+      \includegraphics[width=0.9\linewidth]{figure/3-5-1.eps}
+      \caption*{\small Iter 1 \\ $||\text{err}||_\infty=0.006$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/3-5-2.eps}
+    \caption*{\small Iter 2 \\ $||\text{err}||_\infty=0.0002$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/3-5-3.eps}
+    \caption*{\small Iter 3 \\ $||\text{err}||_\infty=2.5\times 10^{-5}$}
+  \end{minipage}
+\end{figure}
+
+采用full-weighting + 线性插值，每一步迭代的误差分布如下图。
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.22\linewidth}
+      \centering
+      \includegraphics[width=0.9\linewidth]{figure/3-5-4.eps}
+      \caption*{\small Iter 1 \\ $||\text{err}||_\infty=0.0005$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/3-5-5.eps}
+    \caption*{\small Iter 2 \\ $||\text{err}||_\infty=3.4\times 10^{-5}$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/3-5-6.eps}
+    \caption*{\small Iter 3 \\ $||\text{err}||_\infty=3.5\times 10^{-5}$}
+  \end{minipage}
+\end{figure}
+
+采用injection + 二次插值，每一步迭代的误差分布如下图。
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.22\linewidth}
+      \centering
+      \includegraphics[width=0.9\linewidth]{figure/3-5-7.eps}
+      \caption*{\small Iter 1 \\ $||\text{err}||_\infty=4.2\times 10^{-5}$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/3-5-8.eps}
+    \caption*{\small Iter 2 \\ $||\text{err}||_\infty=3.5\times 10^{-5}$}
+  \end{minipage}
+\end{figure}
+
+采用full-weighting + 二次插值，每一步迭代的误差分布如下图。
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.22\linewidth}
+      \centering
+      \includegraphics[width=0.9\linewidth]{figure/3-5-9.eps}
+      \caption*{\small Iter 1 \\ $||\text{err}||_\infty=0.0001$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/3-5-10.eps}
+    \caption*{\small Iter 2 \\ $||\text{err}||_\infty=3.5\times 10^{-5}$}
+  \end{minipage}
+\end{figure}
+
+下面我们取$n=2^{5},...,2^{10}$的网格测试，方程组求解误差达到$10^{-8}$即停，记录各实验组达到理论误差所需的迭代次数。理论误差、迭代次数与求解时间如下表（误差均以无穷范数计）。
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{c|ccccccc}
+   $\mathbf{n}$      & $2^{5}$                   & $2^{6}$                   & $2^{7}$                  & $2^{8}$      & $2^{9}$   & $2^{10}$           \\ \hline
+理论误差$(\leq)$   & $3.49\times 10^{-5}$ & $8.77\times 10^{-6}$ & $2.23\times 10^{-6}$ & $5.96\times 10^{-7}$ & $1.38\times 10^{-7}$ & $3.54\times 10^{-8}$ \\
+injection + 线性插值        & 7  & 7 & 7 & 7 & 7 & 7 \\
+full-weighting + 线性插值   & 6  & 6 & 5 & 5 & 4 & 4 \\
+injection + 二次插值        & 5  & 4 & 4 & 3 & 3 & 3 \\
+full-weighting + 二次插值   & 6  & 5 & 5 & 4 & 4 & 3 \\
+\end{tabular}
+\end{table}
+
+我们可以得出以下三条结论：
+\begin{enumerate}
+  \item 二次插值总是比线性插值好；
+  \item 采用线性插值时，限制算子选择full-weighting比选择injection明显更好；
+  \item 采用二次插值时，两种限制算子的效果区别不大。
+\end{enumerate}
+
+\chapter{总结}
+
+考虑到本文通篇采用的第一人称是“我们”，这里做出解释：“我们”指的是作者Wenchong Huang和他5岁的妹妹。
+
+在本文中，我们实现了一个Poisson方程的多重网格法求解器，并面向用户做了精致的二次封装。用到的主要底层工具有：向量、稀疏矩阵、表达式解析器、json解析器。其中除了json解析器采用了jsoncpp之外，其余的底层工具均由我们自己实现。
+
+在我们实现的稀疏矩阵中，元素使用了行压缩存储法，即存储每个元素的值与列标号，再存储一个额外的数组\verb|row_index|，表示第$i$行第一个元素的位置。比起三元组存储法节省大约$\frac{1}{3}$的空间。
+
+我们放弃了使用模板类，而选择了继承的方式来简化我们的代码。事实证明，我们的代码比使用模板类更加优美。特别是我们的头文件，条理清晰，便于用户与开发者查找函数。
+
+我们的求解器支持了一维情况、二维情况、二维非规则情况。在每一个情况中，求解器的表现都非常良好，除了一维超大型网格下离散精度与机器精度过于相近导致的不良情况，其余测试中，我们的求解器都表现出了二阶的收敛率。
+
+在本文里，我们特别关注误差的分布，在每一个测试中，我们几乎都给出了误差分布的图，这些图均由matlab生成。关注这些图可以让我们更好地了解求解器的表现。
+
+另外，我们做了二维规则情况下的一些理论分析。不过不规则情况下的分析过于复杂，由于我们采用了扭曲网格，导致Laplace方程变形，使得理论分析极其困难。针对扭曲网格的理论分析，我们认为一种可行的思路是借助不确定性量化中的一些方法，因为和规则网格相比，Laplace方程的系数偏差大约在$\frac{0.01}{h^2}$，Neumann边界方程的系数偏差大约在$\frac{0.01}{h}$，也许我们可以不关心偏差的具体数值，将其视为一种“扰动”来分析。
+
+总之，我们对实验结果感到满意，也希望能够进一步完善这份实验。
 
 \end{document}
