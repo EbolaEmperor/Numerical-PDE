@@ -1120,6 +1120,223 @@ LU分解         & 0.002 & 0.022 & 0.42 & 8.168 & - & - & - & 4.281
 
 \section{理论分析}
 
+\subsection{基本表述}
+
+在这一节中，我们以齐次Dirichlet边值问题为例给出理论分析，此时的离散方程为$A\mathbf{u}=\mathbf{f}$，系数矩阵$A\in\mathbb{R}^{n^2\times n^2}$是分块矩阵，
+\begin{equation}
+  A=\frac{1}{h^2}\begin{bmatrix}
+    T & -I & \\
+    -I & T & -I & \\
+    & -I & T & -I &\\
+    & & \ddots & \ddots & \ddots\\
+    & & & -I & T
+  \end{bmatrix},\qquad \text{其中}\;\;
+  T=\begin{bmatrix}
+    4 & -1 & \\
+    -1 & 4 & -1 & \\
+    & -1 & 4 & -1 &\\
+    & & \ddots & \ddots & \ddots\\
+    & & & -1 & 4
+  \end{bmatrix}\in\mathbb{R}^{n\times n}.
+\end{equation}
+
+根据讲义Theorem 7.52，我们有：
+\begin{theorem}
+  式(4.4)中矩阵$A$的特征值与对应的特征向量为：
+  \begin{equation}
+    \lambda_{ij}=\lambda_i+\lambda_j,\quad \mathbf{W}_{ij}=\text{vec}(\mathbf{w}_i\mathbf{w}_j^T),\quad i,j=1,...,n-1.
+  \end{equation}
+  其中
+  \begin{equation}
+    \lambda_k=\frac{4}{h^2}\sin^2\frac{kh\pi}{2},\quad w_{k,j}=\sin(jkh\pi),\quad k,j=1,...,n-1.
+  \end{equation}
+\end{theorem}
+
+\begin{lemma}
+  式(4.4)中矩阵$A$的加权Jacobi迭代矩阵为：
+  \begin{equation}
+    T_\omega=(1-\omega)I+\omega D^{-1}(L+U)=I-\frac{\omega h^2}{4}A.
+  \end{equation}
+
+  $T_\omega$的特征向量与$A$一样，对应的特征值为：
+  \begin{equation}
+    \lambda_{ij}(T_\omega)=1-\frac{\omega h^2}{4}\lambda_{ij}=1-\omega\sin^2\frac{ih\pi}{2}-\omega\sin^2\frac{jh\pi}{2}.
+  \end{equation}
+\end{lemma}
+
+\begin{definition}
+  二维full-weighting算子由下式给出。
+  \begin{equation*}
+  v^{2h}_{i,j}=\frac{1}{16}(v^h_{2i-1,2j-1}+v^h_{2i-1,2j+1}+v^h_{2i+1,2j-1}+v^h_{2i+1,2j+1})
+  +\frac{1}{8}(v^h_{2i,2j-1}+v^h_{2i,2j+1}+v^h_{2i-1,2j}+v^h_{2i+1,2j}) + \frac{1}{4}v^h_{2i,2j}.
+  \end{equation*}
+  其中$i,j=1,...,n$. 用$\mathbf{I}_h^{2h}$表示二维full-weighting算子。
+\end{definition}
+
+\begin{definition}
+  二维线性插值算子$\mathbf{I}_{2h}^h=4(\mathbf{I}_h^{2h})^T.$
+\end{definition}
+
+\subsection{The Spectral Picture}
+
+我们引述讲义 Lemma 9.38 与 Lemma 9.39：
+\begin{lemma}
+  full-weighting算子在一对互补波上作用的结果为：
+  \begin{align}
+    I_h^{2h} \mathbf{w}_k^h&=c_k\mathbf{w}_k^{2h}:=\cos^2\frac{k\pi}{2n}\mathbf{w}_k^{2h},
+    & I_h^{2h} \mathbf{w}_{k'}^h&=-s_k\mathbf{w}_k^{2h}:=-\sin^2\frac{k\pi}{2n}\mathbf{w}_k^{2h}
+  \end{align}
+  其中$k\in[1,\frac{n}{2}),k'=n-k$. 另外，$I_h^{2h}\mathbf{w}_{\frac{n}{2}}^h=\mathbf{0}$.
+\end{lemma}
+
+\begin{lemma}
+  线性插值算子在波上的作用结果为：
+  \begin{equation}
+    I^h_{2h} \mathbf{w}_k^{2h}=c_k\mathbf{w}_k^h-s_k\mathbf{w}_{k'}^h,
+  \end{equation}
+  其中$k\in[1,\frac{n}{2}),k'=n-k$.
+\end{lemma}
+
+下面给出二维情形中的相应结果：
+\begin{definition}
+  对于$i,j\in[1,\frac{n}{2})$，记$i'=n-i,j'=n-j$，我们称$\mathbf{W}_{ij},\mathbf{W}_{ij'},\mathbf{W}_{ij'},\mathbf{W}_{i'j'}$为一组\textbf{互补波}。
+\end{definition}
+
+\begin{lemma}
+  二维full-weighting算子在一组互补波上作用的结果为：
+  \begin{subequations}
+    \begin{align}
+      \mathbf{I}_h^{2h} \mathbf{W}_{ij}^h&=c_ic_j\mathbf{W}_{ij}^{2h}, \\
+      \mathbf{I}_h^{2h} \mathbf{W}_{ij'}^h&=-c_is_j\mathbf{W}_{ij}^{2h}, \\
+      \mathbf{I}_h^{2h} \mathbf{W}_{i'j}^h&=-s_ic_j\mathbf{W}_{ij}^{2h}, \\
+      \mathbf{I}_h^{2h} \mathbf{W}_{i'j'}^h&=s_is_j\mathbf{W}_{ij}^{2h}.
+    \end{align}
+  其中$i,j\in[1,\frac{n}{2}),i'=n-i,j'=n-j$. 另外
+    \begin{align}
+      \mathbf{I}_h^{2h}\mathbf{W}_{i\frac{n}{2}}^h&=\mathbf{0},\quad i=1,...,n-1\\
+      \mathbf{I}_h^{2h}\mathbf{W}_{\frac{n}{2}j}^h&=\mathbf{0},\quad j=1,...,n-1.
+    \end{align}
+  \end{subequations}
+\end{lemma}
+
+\begin{proof}
+  取定$i,j\in[1,\frac{n}{2})$，根据定义4.1与引理4.2，有：
+  \begin{align*}
+    \left(\mathbf{I}_h^{2h} \mathbf{W}_{ij}^h\right)_{kl} =& \frac{1}{4}\left(\frac{1}{4}w_{i,2k-1}+\frac{1}{2}w_{i,2k}+\frac{1}{4}w_{i,2k+1}\right)w_{j,2l-1}
+    + \frac{1}{2}\left(\frac{1}{4}w_{i,2k-1}+\frac{1}{2}w_{i,2k}+\frac{1}{4}w_{i,2k+1}\right)w_{j,2l}+\\
+    &\frac{1}{4}\left(\frac{1}{4}w_{i,2k-1}+\frac{1}{2}w_{i,2k}+\frac{1}{4}w_{i,2k+1}\right)w_{j,2l+1}\\
+    =& \frac{1}{4}c_iw_{i,k}^{2h}w_{j,2l-1}+\frac{1}{2}c_iw_{i,k}^{2h}w_{j,2l}+\frac{1}{4}c_iw_{i,k}^{2h}w_{j,2l+1}\\
+    =& c_iw_{i,k}^{2h}c_jw_{j,l}^{2h}.
+  \end{align*}
+
+  所以$\mathbf{I}_h^{2h} \mathbf{W}_{ij}^h=c_ic_j\mathbf{W}_{ij}^{2h}$. 其余结论同理可证。
+\end{proof}
+
+\begin{lemma}
+  线性插值算子在波上的作用结果为：
+  \begin{equation}
+    I^h_{2h} \mathbf{W}_{ij}^{2h}=c_ic_j\mathbf{W}_{ij}^h-c_is_j\mathbf{W}_{ij'}^h-s_ic_j\mathbf{W}_{i'j}^h+s_is_j\mathbf{W}_{i'j'}^h,
+  \end{equation}
+  其中$i,j\in[1,\frac{n}{2}),i'=n-i,j'=n-j$.
+\end{lemma}
+
+\begin{proof}
+  取定$i,j\in[1,\frac{n}{2})$，设$k,l\in(1,n-1)$，若$k,l$均为奇数，我们有：
+  \begin{align*}
+    \left(I^h_{2h} \mathbf{W}_{ij}^{2h}\right)_{kl} =& \frac{1}{4}w_{i,\frac{k-1}{2}}^{2h}w_{j,\frac{l-1}{2}}^{2h}
+    +\frac{1}{4}w_{i,\frac{k-1}{2}}^{2h}w_{j,\frac{l+1}{2}}^{2h} + \frac{1}{4}w_{i,\frac{k+1}{2}}^{2h}w_{j,\frac{l-1}{2}}^{2h}
+    +\frac{1}{4}w_{i,\frac{k+1}{2}+1}^{2h}w_{j,\frac{l+1}{2}}^{2h}\\
+    =& \frac{1}{4}\sin(i(k-1)h\pi)\sin(j(l-1)h\pi)+\frac{1}{4}\sin(i(k-1)h\pi)\sin(j(l+1)h\pi)+\\
+     &\frac{1}{4}\sin(i(k+1)h\pi)\sin(j(l-1)h\pi)+\frac{1}{4}\sin(i(k+1)h\pi)\sin(j(l+1)h\pi)\\
+    =& \frac{1}{2}\sin(i(k-1)h\pi)\cos(jh\pi)w_{j,l}^h+\frac{1}{2}\sin(i(k+1)h\pi)\cos(jh\pi)w_{j,l}^h=\cos(ih\pi)\cos(jh\pi)w_{i,k}^hw_{j,l}^h.
+  \end{align*}
+  \begin{align*}
+    &\left(c_ic_j\mathbf{W}_{ij}^h-c_is_j\mathbf{W}_{ij'}^h-s_ic_j\mathbf{W}_{i'j}^h+s_is_j\mathbf{W}_{i'j'}^h\right)_{kl}\\
+    =& c_iw_{i,k}^hc_jw_{j,l}^h-c_iw_{i,k}^hs_jw_{n-j,l}^h-s_iw_{n-i,k}^hc_jw_{j,l}^h+s_iw_{n-i,k}^hs_jw_{n-j,l}^h\\
+    =& \left(\cos^2\frac{ih\pi}{2}\cos^2\frac{jh\pi}{2}-\cos^2\frac{ih\pi}{2}\sin^2\frac{jh\pi}{2}-\sin^2\frac{ih\pi}{2}\cos^2\frac{jh\pi}{2}+\sin^2\frac{ih\pi}{2}\sin^2\frac{jh\pi}{2}\right)w_{i,k}^hw_{j,l}^h\\
+    =& \left(\cos^2\frac{ih\pi}{2}\cos(jh\pi)-\sin^2\frac{ih\pi}{2}c_j\cos(jh\pi)\right)w_{i,k}^hw_{j,l}^h = \cos(ih\pi)\cos(jh\pi)w_{i,k}^hw_{j,l}^h.
+  \end{align*}
+
+  从而该分量得证。现在考虑$k$为偶数、$l$为奇数，我们有：
+  \begin{align*}
+    \left(I^h_{2h} \mathbf{W}_{ij}^{2h}\right)_{kl} =& \frac{1}{2}w_{i,\frac{k}{2}}^{2h}w_{j,\frac{l-1}{2}}^{2h}
+    +\frac{1}{2}w_{i,\frac{k}{2}}^{2h}w_{j,\frac{l+1}{2}}^{2h}\\
+    =& \frac{1}{2}\sin(ikh\pi)\sin(j(l-1)h\pi)+\frac{1}{2}\sin(ikh\pi)\sin(j(l+1)h\pi)\\
+    =& \cos(ih\pi)w_{i,k}^hw_{j,l}^h.
+  \end{align*}
+  \begin{align*}
+    &\left(c_ic_j\mathbf{W}_{ij}^h-c_is_j\mathbf{W}_{ij'}^h-s_ic_j\mathbf{W}_{i'j}^h+s_is_j\mathbf{W}_{i'j'}^h\right)_{kl}\\
+    =& c_iw_{i,k}^hc_jw_{j,l}^h-c_iw_{i,k}^hs_jw_{n-j,l}^h-s_iw_{n-i,k}^hc_jw_{j,l}^h+s_iw_{n-i,k}^hs_jw_{n-j,l}^h\\
+    =& \left(\cos^2\frac{ih\pi}{2}\cos^2\frac{jh\pi}{2}+\cos^2\frac{ih\pi}{2}\sin^2\frac{jh\pi}{2}-\sin^2\frac{ih\pi}{2}\cos^2\frac{jh\pi}{2}-\sin^2\frac{ih\pi}{2}\sin^2\frac{jh\pi}{2}\right)w_{i,k}^hw_{j,l}^h\\
+    =& \left(\cos^2\frac{ih\pi}{2}-\sin^2\frac{ih\pi}{2}c_j\right)w_{i,k}^hw_{j,l}^h = \cos(ih\pi)w_{i,k}^hw_{j,l}^h.
+  \end{align*}
+
+  从而该分量得证。$k$为奇数、$l$为偶数的情况同理。此外，对于$k,l$取$1$或$n-1$时的边界情况，过于繁琐，不再赘述。综上所述(4.10)式成立。
+\end{proof}
+
+\begin{theorem}
+  $\mathcal{W}_{ij}^h=\text{span}\{\mathbf{W}_{ij},\mathbf{W}_{ij'},\mathbf{W}_{ij'},\mathbf{W}_{i'j'}\}$是Two-Grid校正算子的不变子空间。
+\end{theorem}
+
+\begin{proof}
+  事实上，
+  \begin{equation*}
+    TG=T_\omega^{\nu_2}(I-\mathbf{I}_{2h}^h(A^{2h})^{-1}\mathbf{I}_h^{2h}A^h)T_\omega^{\nu_1}.
+  \end{equation*}
+  根据定理4.1、引理4.1、引理4.4、引理4.5，容易验证$\mathcal{W}$是$TG$算子的不变子空间。我们经过仔细运算后发现系数过长，且不美观，故不再像讲义里那样列出。
+\end{proof}
+
+\begin{proposition}
+  取$\nu_1=\nu_2=1$，有$\rho(TG)<0.25$，因此能Two-Grid校正能够快速收敛。
+\end{proposition}
+
+我们作图来验证上述命题。事实上，根据定理4.2，我们有：
+\begin{equation}
+  TG\begin{bmatrix}
+    \mathbf{W}_{ij}^h\\
+    \mathbf{W}_{ij'}^h\\
+    \mathbf{W}_{i'j}^h\\
+    \mathbf{W}_{i'j'}^h
+  \end{bmatrix} = 
+  \begin{bmatrix}
+    c_{11} & c_{12} & c_{13} & c_{14}\\
+    c_{21} & c_{22} & c_{23} & c_{24}\\
+    c_{31} & c_{32} & c_{33} & c_{34}\\
+    c_{41} & c_{42} & c_{43} & c_{44}\\
+  \end{bmatrix}
+  \begin{bmatrix}
+    \mathbf{W}_{ij}^h\\
+    \mathbf{W}_{ij'}^h\\
+    \mathbf{W}_{i'j}^h\\
+    \mathbf{W}_{i'j'}^h
+  \end{bmatrix}
+\end{equation}
+
+因此，我们只需对每个$i,j\in[0,\frac{n}{2})$，求出相应的$C=(c_{ij})$，计算$\rho(C)$并取最大值即可得到$\rho(TG)$。我们绘制$(i,j)-\rho(C)$图，如下图所示，可以发现$\rho(TG)<0.25$。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.9\linewidth]{figure/2-t-1.eps}
+      \caption*{$n=8,\rho(TG)=0.2217$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/2-t-2.eps}
+    \caption*{$n=16,\rho(TG)=0.2259$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/2-t-3.eps}
+    \caption*{$n=32,\rho(TG)=0.2274$}
+  \end{minipage}
+\end{figure}
+
+\subsection{The Algebraic Picture}
+
 \chapter{二维不规则区域中的BVP}
 
 在本节中，我们求解区域$\Omega=\{(x,y):x\in(0,1),y\in(D(x),1)\}$中的Poisson方程，其中$D(x)=\frac{1}{16}\sin(\pi x).$
