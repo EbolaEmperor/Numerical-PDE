@@ -5,7 +5,7 @@
     "Grid Size": 32,
     "f": "-(1-sin(x)+cos(x)*cos(x))*exp(sin(x)+y)",
     "g": "exp(sin(x)+y)",
-    "Cycle Type": "V",
+    "Cycle Type": "FMG",
     "Restriction": "injection",
     "Prolongation": "linear",
     "Max Iter": 6,

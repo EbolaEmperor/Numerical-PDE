@@ -563,7 +563,7 @@ FMG-Cycle 耗时$(s)$ & 0.098 & 0.182 & 0.308 & 0.625
   \item full-weighting + 二次插值
 \end{enumerate}
 
-事实上，不管是怎样的算子组合，都能达到$O(h^2)$的精度，因此最终都能收敛至二阶理论精度。但是二次插值的精度是$O(h^3)$，因此我们有理由相信使用二次插值具有较快的收敛速度。
+事实上，不管是怎样的算子组合，都能达到$O(h^2)$的精度，因此最终都能收敛至二阶离散误差。但是二次插值的精度是$O(h^3)$，因此我们有理由相信使用二次插值具有较快的收敛速度。
 
 以$n=2^{15}$的网格为例，采用 injection + 线性插值 组合，每一步迭代的误差分布如下图。
 
@@ -964,142 +964,125 @@ FMG-Cycle 耗时$(s)$ & 0.011 & 0.024 & 0.077 & 0.260 & 0.905
   \item full-weighting + 二次插值
 \end{enumerate}
 
-以$n=64$网格为例，采用injection + 线性插值，每两步迭代的误差分布如下图。
+以$n=64$网格为例，采用injection + 线性插值，每步迭代的误差分布如下图。
 \begin{figure}[H]
   \centering
   \begin{minipage}[t]{0.22\linewidth}
       \centering
       \includegraphics[width=0.84\linewidth]{figure/2-5-1.eps}
-      \caption*{\small Iter 2 \\ $||\text{err}||_\infty=0.205$}
+      \caption*{\small Iter 1 \\ 代数误差 $0.0087$}
   \end{minipage}
   \hspace{1em}
   \begin{minipage}[t]{0.22\linewidth}
     \centering
     \includegraphics[width=0.84\linewidth]{figure/2-5-2.eps}
-    \caption*{\small Iter 4 \\ $||\text{err}||_\infty=0.002$}
+    \caption*{\small Iter 2 \\ 代数误差 $0.0003$}
   \end{minipage}
   \hspace{1em}
   \begin{minipage}[t]{0.22\linewidth}
     \centering
     \includegraphics[width=0.84\linewidth]{figure/2-5-3.eps}
-    \caption*{\small Iter 6 \\ $||\text{err}||_\infty=3.1\times 10^{-5}$}
+    \caption*{\small Iter 3 \\ 代数误差 $1.35\times 10^{-5}$}
   \end{minipage}
   \hspace{1em}
   \begin{minipage}[t]{0.22\linewidth}
     \centering
     \includegraphics[width=0.84\linewidth]{figure/2-5-4.eps}
-    \caption*{\small Iter 8 \\ $||\text{err}||_\infty=8.8\times 10^{-6}$}
+    \caption*{\small Iter 4 \\ 代数误差 $5.72\times 10^{-7}$}
   \end{minipage}
 \end{figure}
 
-采用full-weighting + 线性插值，每两步迭代的误差分布如下图。
+采用full-weighting + 线性插值，每步迭代的误差分布如下图。
 \begin{figure}[H]
   \centering
   \begin{minipage}[t]{0.22\linewidth}
       \centering
       \includegraphics[width=0.84\linewidth]{figure/2-5-5.eps}
-      \caption*{\small Iter 2 \\ $||\text{err}||_\infty=0.144$}
+      \caption*{\small Iter 1 \\ 代数误差 $0.0002$}
   \end{minipage}
   \hspace{1em}
   \begin{minipage}[t]{0.22\linewidth}
     \centering
     \includegraphics[width=0.84\linewidth]{figure/2-5-6.eps}
-    \caption*{\small Iter 4 \\ $||\text{err}||_\infty=0.003$}
+    \caption*{\small Iter 2 \\ 代数误差 $3.93\times 10^{-6}$}
   \end{minipage}
   \hspace{1em}
   \begin{minipage}[t]{0.22\linewidth}
     \centering
     \includegraphics[width=0.84\linewidth]{figure/2-5-7.eps}
-    \caption*{\small Iter 6 \\ $||\text{err}||_\infty=8.3\times 10^{-5}$}
+    \caption*{\small Iter 3 \\ 代数误差 $2.35\times 10^{-7}$}
   \end{minipage}
   \hspace{1em}
   \begin{minipage}[t]{0.22\linewidth}
     \centering
     \includegraphics[width=0.84\linewidth]{figure/2-5-8.eps}
-    \caption*{\small Iter 8 \\ $||\text{err}||_\infty=1.1\times 10^{-5}$}
+    \caption*{\small Iter 4 \\ 代数误差 $1.61\times 10^{-8}$}
   \end{minipage}
 \end{figure}
 
-采用injection + 二次插值，每两步迭代的误差分布如下图。
+采用injection + 二次插值，每步迭代的误差分布如下图。
 \begin{figure}[H]
   \centering
   \begin{minipage}[t]{0.22\linewidth}
       \centering
       \includegraphics[width=0.84\linewidth]{figure/2-5-9.eps}
-      \caption*{\small Iter 2 \\ $||\text{err}||_\infty=0.042$}
+      \caption*{\small Iter 1 \\ 代数误差 $3.01\times 10^{-6}$}
   \end{minipage}
   \hspace{1em}
   \begin{minipage}[t]{0.22\linewidth}
     \centering
     \includegraphics[width=0.84\linewidth]{figure/2-5-10.eps}
-    \caption*{\small Iter 4 \\ $||\text{err}||_\infty=5.6\times 10^{-4}$}
+    \caption*{\small Iter 2 \\ 代数误差 $7.46\times 10^{-8}$}
   \end{minipage}
-  \hspace{1em}
+\end{figure}
+
+采用full-weighting + 二次插值，每步迭代的误差分布如下图。
+\begin{figure}[H]
+  \centering
   \begin{minipage}[t]{0.22\linewidth}
-    \centering
-    \includegraphics[width=0.84\linewidth]{figure/2-5-11.eps}
-    \caption*{\small Iter 6 \\ $||\text{err}||_\infty=7.1\times 10^{-6}$}
+      \centering
+      \includegraphics[width=0.84\linewidth]{figure/2-5-11.eps}
+      \caption*{\small Iter 1 \\ 代数误差 $2.64\times 10^{-5}$}
   \end{minipage}
   \hspace{1em}
   \begin{minipage}[t]{0.22\linewidth}
     \centering
     \includegraphics[width=0.84\linewidth]{figure/2-5-12.eps}
-    \caption*{\small Iter 8 \\ $||\text{err}||_\infty=8.6\times 10^{-6}$}
+    \caption*{\small Iter 2 \\ 代数误差 $7.82\times 10^{-7}$}
+  \end{minipage}
+  \hspace{1em}
+  \begin{minipage}[t]{0.22\linewidth}
+    \centering
+    \includegraphics[width=0.84\linewidth]{figure/2-5-13.eps}
+    \caption*{\small Iter 3 \\ 代数误差 $4.33\times 10^{-8}$}
   \end{minipage}
 \end{figure}
 
-注意，上述第6步到第8步发生了误差增大。其实这是真实误差增大，方程组的求解误差仍在减小，并不能据此认为第6步的结果更好，第6步得到一个比较小的真实误差纯属巧合。
+注意，上述误差分布图是真实误差的分布图，我们在图下方标注了此时的代数误差（以无穷范数计）。实际上，在代数误差下降的过程中，真实误差有时会增大，这是因为较大的代数误差有时恰好抵消了一部分离散误差，但这并不能作为最终的可信结果，我们还是应当以代数误差下降到足够小时的结果为最终结果。
 
-采用full-weighting + 二次插值，每两步迭代的误差分布如下图。
-\begin{figure}[H]
-  \centering
-  \begin{minipage}[t]{0.22\linewidth}
-      \centering
-      \includegraphics[width=0.84\linewidth]{figure/2-5-13.eps}
-      \caption*{\small Iter 2 \\ $||\text{err}||_\infty=0.040$}
-  \end{minipage}
-  \hspace{1em}
-  \begin{minipage}[t]{0.22\linewidth}
-    \centering
-    \includegraphics[width=0.84\linewidth]{figure/2-5-14.eps}
-    \caption*{\small Iter 4 \\ $||\text{err}||_\infty=1.6\times 10^{-4}$}
-  \end{minipage}
-  \hspace{1em}
-  \begin{minipage}[t]{0.22\linewidth}
-    \centering
-    \includegraphics[width=0.84\linewidth]{figure/2-5-15.eps}
-    \caption*{\small Iter 6 \\ $||\text{err}||_\infty=9.5\times 10^{-6}$}
-  \end{minipage}
-  \hspace{1em}
-  \begin{minipage}[t]{0.22\linewidth}
-    \centering
-    \includegraphics[width=0.84\linewidth]{figure/2-5-16.eps}
-    \caption*{\small Iter 8 \\ $||\text{err}||_\infty=8.6\times 10^{-6}$}
-  \end{minipage}
-\end{figure}
-
-我们使用不同大小的网格，取$n=32,64,128,256,512$，对每个实验组分别做六次V-Cycle迭代，结果的误差与离散误差如下表（均以无穷范数计）。
+我们使用不同大小的网格，取$n=2^5,2^6,...,2^{10}$，对每个实验组分别迭代求解，当代数误差达到$10^{-8}$时停止迭代，此时达到离散误差。各实验组需要的迭代次数与离散误差如下表（误差以无穷范数计）。
 
 \begin{table}[H]
   \centering
   \small
   \begin{tabular}{c|ccccccc}
-   $\mathbf{n}$       & 32                   & 64                   & 128                  & 256                  & 512                 \\ \hline
-injection+线性插值   & $4.74\times 10^{-5}$ & $3.05\times 10^{-5}$ & $3.69\times 10^{-5}$ & $5.30\times 10^{-5}$ & $7.70\times 10^{-5}$  \\
-full-weighting+线性插值   & $1.05\times 10^{-4}$ & $8.28\times 10^{-5}$ & $8.01\times 10^{-5}$ & $8.31\times 10^{-5}$ & $8.49\times 10^{-5}$  \\
-injection+二次插值   & $3.43\times 10^{-5}$ & $7.06\times 10^{-6}$ & $4.37\times 10^{-6}$ & $8.15\times 10^{-6}$ & $1.08\times 10^{-5}$  \\
-full-weighting+二次插值   & $3.52\times 10^{-5}$ & $9.51\times 10^{-6}$ & $3.07\times 10^{-6}$ & $1.48\times 10^{-6}$ & $1.09\times 10^{-6}$  \\
-离散误差$(\leq)$   & $3.45\times 10^{-5}$ & $8.62\times 10^{-6}$ & $2.16\times 10^{-6}$ & $5.39\times 10^{-7}$ & $1.35\times 10^{-7}$
+   $\mathbf{n}$       & 32                   & 64                   & 128                  & 256                  & 512      & 1024           \\ \hline
+injection+线性插值   & 6 & 7 & 7 & 7 & 7 &  7 \\
+full-weighting+线性插值   & 6 & 6 & 5 & 5 & 4 & 4 \\
+injection+二次插值   & 5 & 4 & 3 & 3 & 3 & 3 \\
+full-weighting+二次插值   & 5 & 5 & 5 & 4 & 4 & 3 \\
+离散误差$(\leq)$   & $3.45\times 10^{-5}$ & $8.62\times 10^{-6}$ & $2.16\times 10^{-6}$ & $5.39\times 10^{-7}$ & $1.35\times 10^{-7}$ & $3.37\times 10^{-8}$
 \end{tabular}
 \end{table}
 
-通过上述实验，我们比较出以下两条结论：
-\begin{enumerate}[(1)]
-  \item 采用二次插值的收敛速度比采用线性插值快；
-  \item 线性插值更适合搭配injection使用，二次插值更适合搭配full-weighting使用。
+我们可以得出以下三条结论：
+\begin{enumerate}
+  \item 二次插值总是比线性插值好；
+  \item 采用线性插值时，限制算子选择full-weighting比选择injection明显更好；
+  \item 采用二次插值时，两种限制算子的效果区别不大。
 \end{enumerate}
 
-事实上，通过多次迭代，无论何种算子组合都能达到理论精度。这是因为理论精度是$O(h^2)$，而即使是最低阶的线性插值，精度也已经是$O(h^2)$，二次插值的精度则是更高阶的$O(h^3)$。
+事实上，通过多次迭代，无论何种算子组合都能达到离散误差。这是因为离散误差是$O(h^2)$，而即使是最低阶的线性插值，精度也已经是$O(h^2)$，二次插值的精度则是更高阶的$O(h^3)$。
 
 \subsection{多重网格与LU分解法的求解速度对比}
 
