@@ -1,0 +1,202 @@
+\documentclass[twoside,a4paper]{article}
+\usepackage{geometry}
+\geometry{margin=1.5cm, vmargin={0pt,1cm}}
+\setlength{\topmargin}{-1cm}
+\setlength{\paperheight}{29.7cm}
+\setlength{\textheight}{25.3cm}
+
+% useful packages.
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{enumerate}
+\usepackage{graphicx}
+\usepackage{multicol}
+\usepackage{fancyhdr}
+\usepackage{layout}
+
+% some common command
+\newcommand{\dif}{\mathrm{d}}
+\newcommand{\avg}[1]{\left\langle #1 \right\rangle}
+\newcommand{\difFrac}[2]{\frac{\dif #1}{\dif #2}}
+\newcommand{\pdfFrac}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\OFL}{\mathrm{OFL}}
+\newcommand{\UFL}{\mathrm{UFL}}
+\newcommand{\fl}{\mathrm{fl}}
+\newcommand{\op}{\odot}
+\newcommand{\Eabs}{E_{\mathrm{abs}}}
+\newcommand{\Erel}{E_{\mathrm{rel}}}
+
+\begin{document}
+
+\pagestyle{fancy}
+\fancyhead{}
+\lhead{Wenchong Huang (3200100006)}
+\chead{Numerical PDE homework \#1}
+\rhead{Mar. 19th, 2023}
+
+
+\section*{I. Exercise 7.14 (Check the different norms.)}
+
+\begin{equation*}
+	||\mathbf{g}||_\infty = \max_{1\leq i\leq N} |g_i| = \max\{O(h), O(h^2)\} = O(h).
+\end{equation*}
+
+Note that $hN$ is $O(1)$, we have:
+\begin{equation*}
+	||\mathbf{g}||_1=h\sum_{i=2}^{N-1} O(h^2) + 2hO(h) = O(h^2) + O(h^2) = O(h^2)
+\end{equation*}
+
+\begin{equation*}
+	||\mathbf{g}||_2=\left(h\sum_{i=2}^{N-1} O(h^4) + 2hO(h^2)\right)^\frac{1}{2}=\left(O(h^4) + O(h^3)\right)^\frac{1}{2} = O\left(h^\frac{3}{2}\right)
+\end{equation*}
+
+\section*{II. Exercise 7.35 (Show the elements in the first column of $A_E^{-1}$ are $O(1)$.)}
+
+\begin{equation*}
+	A_E=\frac{1}{h^2}\begin{bmatrix}
+		-h & h  &   & \\
+		1  & -2 & 1 &  \\
+		   & 1  & -2& 1  \\
+		   &    & \ddots & \ddots & \ddots  \\
+		   &    &        &  1 & -2 & 1 \\
+		   &    &        &    &  1 & -2 & 1\\
+		   &    &        &    &    &  0 & h^2
+	\end{bmatrix}.
+\end{equation*}
+
+Suppose $v$ is the first column of $A_E^{-1}$, which is uniquely determined by
+\begin{equation*}
+	A_Ev=e_1
+\end{equation*}
+
+where $e_1=[1,0,0,...,0]^T$. Solve the equation above, we got
+\begin{equation*}
+	v=-h\begin{bmatrix}m+1 \\ m \\ \vdots \\ 1 \\ 0\end{bmatrix}
+\end{equation*}
+
+Note that $(m+1)h=1$, hence the elements in $v$ are $O(1)$.
+
+\section*{III. Exercise 7.40 (Estimate LTE of the FD method in two dimensions.)}
+
+\;\;\;\; For simplicity, we will write $\frac{\partial^k u}{\partial x^k},\;\frac{\partial^k u}{\partial y^k}$ instead of $\frac{\partial^k u}{\partial x^k}(x_i,y_j),\;\frac{\partial^k u}{\partial y^k}(x_i,y_j)$.
+
+By using Taylor expansion, we derive that
+\begin{equation*}
+	U_{i-1,j} = U_{ij} - h\frac{\partial u}{\partial x} + \frac{h^2}{2}\frac{\partial^2 u}{\partial x^2}
+	-\frac{h^3}{6}\frac{\partial^3 u}{\partial x^3} + \frac{h^4}{24}\frac{\partial^4 u}{\partial x^4}\
+	-\frac{h^5}{120}\frac{\partial^5 u}{\partial x^5} + O(h^6),\\
+\end{equation*}
+
+\begin{equation*}
+	U_{i+1,j} = U_{ij} + h\frac{\partial u}{\partial x} + \frac{h^2}{2}\frac{\partial^2 u}{\partial x^2}
+	+\frac{h^3}{6}\frac{\partial^3 u}{\partial x^3} + \frac{h^4}{24}\frac{\partial^4 u}{\partial x^4}\
+	+\frac{h^5}{120}\frac{\partial^5 u}{\partial x^5} + O(h^6).
+\end{equation*}
+
+Sum them up, we got
+\begin{equation*}
+	U_{i-1,j}-2U_{ij}+U_{i+1,j} = h^2\frac{\partial^2 u}{\partial x^2} + \frac{h^4}{12}\frac{\partial^4 u}{\partial x^4} + O(h^6).
+\end{equation*}
+
+Similarly we have
+\begin{equation*}
+	U_{i,j-1}-2U_{ij}+U_{i,j+1} = h^2\frac{\partial^2 u}{\partial y^2} + \frac{h^4}{12}\frac{\partial^4 u}{\partial y^4} + O(h^6).
+\end{equation*}
+
+And hence that
+\begin{align*}
+	\tau_{i,j} &= -D^2u(x_i,y_j) - (-\Delta u(x_i,y_j)) \\
+	&= -\frac{U_{i-1,j}-2U_{ij}+U_{i+1,j}}{h^2}-\frac{U_{i,j-1}-2U_{ij}+U_{i,j+1}}{h^2}+\frac{\partial^2 u}{\partial x^2}+\frac{\partial^2 u}{\partial y^2}\\
+	&= -\frac{h^2\frac{\partial^2 u}{\partial x^2} + \frac{h^4}{12}\frac{\partial^4 u}{\partial x^4} + O(h^6)}{h^2} - \frac{h^2\frac{\partial^2 u}{\partial y^2} + \frac{h^4}{12}\frac{\partial^4 u}{\partial y^4} + O(h^6).}{h^2} + \frac{\partial^2 u}{\partial x^2}+\frac{\partial^2 u}{\partial y^2}\\
+	&= -\frac{\partial^2 u}{\partial x^2}+\frac{h^2}{12}\frac{\partial^4 u}{\partial x^4}+O(h^4)-\frac{\partial^2 u}{\partial y^2}+\frac{h^2}{12}\frac{\partial^4 u}{\partial y^4}+O(h^4)+ \frac{\partial^2 u}{\partial x^2}+\frac{\partial^2 u}{\partial y^2}\\
+	&= -\frac{h^2}{12}\left.\left(\frac{\partial^4 u}{\partial x^4}+\frac{\partial^4 u}{\partial y^4}\right)\right|_{(x_i,y_j)}+O(h^4)
+\end{align*}
+
+\section*{IV. Exercise 7.60 (Estimate LTE of irregular and regular points.)}
+
+\;\;\;\; Since $\overline{\Omega}=[0,1]^2$ is compact, the value
+\begin{equation*}
+	M=\max_{\overline{\Omega}} \left|\frac{\partial^4 u}{\partial x^4}+\frac{\partial^4 u}{\partial y^4}\right|
+\end{equation*}
+
+exists. Hence by Exercise 7.40, for the regular point $Q$ we have:
+\begin{equation*}
+	|\tau_Q|=\left|-\frac{h^2}{12}\left.\left(\frac{\partial^4 u}{\partial x^4}+\frac{\partial^4 u}{\partial y^4}\right)\right|_Q+O(h^4)\right| \leq \frac{M}{12}h^2+O(h^4).
+\end{equation*}
+
+Hence $\tau_Q$ is $O(h^2)$. Now for the irregular point $P$ we have
+\begin{equation*}
+	L_hU_P=\frac{(1+\theta)U_P-U_A-\theta U_W}{\frac{1}{2}\theta(1+\theta)h^2}+\frac{(1+\alpha)U_P-U_B-\alpha U_S}{\frac{1}{2}\alpha(1+\alpha)h^2},
+\end{equation*}
+
+where
+\begin{equation*}
+U_A=U_P+\theta h\frac{\partial u}{\partial x}+\frac{1}{2}\theta^2h^2\frac{\partial^2 u}{\partial^2 x} + O(h^3),
+\end{equation*}
+
+\begin{equation*}
+U_W=U_P-h\frac{\partial u}{\partial x}+\frac{1}{2}h^2\frac{\partial^2 u}{\partial^2 x} + O(h^3).
+\end{equation*}
+
+Then we have
+\begin{equation*}
+	(1+\theta)U_P-U_A-\theta U_W = -\frac{1}{2}\theta(\theta+1)h^2\frac{\partial^2 u}{\partial x^2} + O(h^3).
+\end{equation*}
+
+Similarly we have
+\begin{equation*}
+	(1+\alpha)U_P-U_B-\alpha U_S = -\frac{1}{2}\alpha(\alpha+1)h^2\frac{\partial^2 u}{\partial x^2} + O(h^3).
+\end{equation*}
+
+Hence
+\begin{equation*}
+	L_hU_P=-\frac{\partial^2 u}{\partial x^2}-\frac{\partial^2 u}{\partial y^2}+O(h).
+\end{equation*}
+
+It follows that
+
+\begin{equation*}
+	\tau_P = L_hU_P - (-\Delta u(P)) = O(h)
+\end{equation*}
+
+
+\section*{V. Exercise 7.62 (Prove Theorem 7.61.)}
+
+\;\;\;\; Define
+\begin{equation*}
+	\psi:\mathbf{X}\to\mathbb{R},\;\psi_P=E_P+T_\text{max}\phi_P,
+\end{equation*}
+
+where $T_\text{max}=\max\left\{\frac{T_1}{C_1},\frac{T_2}{C_2}\right\}$. Now $\forall P\in\mathbf{X}_1$, we have
+\begin{equation*}
+	L_h\psi_P=L_h(E_P+T_\text{max})=T_P+T_mL_h\phi_P\leq T_P-\frac{T_1}{C_1}C_1<0.
+\end{equation*}
+
+Similarly, $\forall P\in\mathbf{X}_2$
+\begin{equation*}
+	L_h\psi_P=L_h(E_P+T_\text{max})=T_P+T_mL_h\phi_P\leq T_P-\frac{T_2}{C_2}C_2<0.
+\end{equation*}
+
+Hence $L_h\psi_P<0$ hold for all $P\in\mathbf{X}$. Furthermore, we have $\max_{P\in\mathbb{X}} \psi_P\geq 0$ because $\phi_P\geq 0$ and
+\begin{equation*}
+	\forall Q\in\mathbf{X}_{\partial \Omega},\quad E_Q=0.
+\end{equation*}
+
+Then by Lemma 7.56 we have
+\begin{equation*}
+	E_P\leq \max_{P\in\mathbf{X}_\Omega}(E_P+T_\text{max}\phi_P)\leq \max_{Q\in\mathbf{X}_{\partial\Omega}}(E_P+T_\text{max}\phi_Q)=T_\text{max}\max_{Q\in\mathbf{X}_{\partial\Omega}}(\phi_Q).
+\end{equation*}
+
+Repeat the above arguments with $\psi_P=-E_P+T_\text{max}\phi_P$ and we have
+\begin{equation*}
+	-E_P\leq T_\text{max} \max_{Q\in\mathbf{X}_{\partial\Omega}}(\phi_Q).
+\end{equation*}
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 
