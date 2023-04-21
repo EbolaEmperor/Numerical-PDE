@@ -7,7 +7,7 @@
 ```cpp
     amgSolver solver;
     solver.generateGrid(A);
-    ColVector sol = solver.solve(b, 'FMG', 20, 1e-12);
+    ColVector sol = solver.solve(b, "FMG", 20, 1e-12);
 ```
 
 上面的`FMG`是Cycle的类型，可以选择`FMG`或`V`；`20`是最大迭代次数，`1e-12`是终止误差（以相对误差的无穷范数计），二者达成任何一个条件即终止迭代。
