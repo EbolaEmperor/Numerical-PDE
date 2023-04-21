@@ -1,6 +1,6 @@
 # 代数多重网格
 
-实现了一个简单的代数多重网格，参考了William L. Briggs等人写的多重网格经典入门书籍《A multigrid Tutorial, 2nd Edition》
+实现了一个简单的代数多重网格，参考了William L. Briggs等人写的多重网格经典入门书籍《A Multigrid Tutorial, 2nd Edition》
 
 给定稀疏矩阵A和方程右端向量b，使用如下代码调用求解器以求解Ax=b
 
