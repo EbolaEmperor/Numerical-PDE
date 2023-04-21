@@ -15,7 +15,7 @@ matrix.o: src/matrix.cpp include/matrix.h
 sparseMatrix.o: src/sparseMatrix.cpp include/sparseMatrix.h src/matrix.cpp include/matrix.h
 	g++ -c src/sparseMatrix.cpp -Iinclude -O2 -O3 -Ofast
 
-amgSolver.o: src/avl.cpp include/avl.h src/sparseMatrix.cpp include/sparseMatrix.h src/matrix.cpp include/matrix.h
+amgSolver.o: src/amgSolver.cpp include/amgSolver.h src/avl.cpp include/avl.h src/sparseMatrix.cpp include/sparseMatrix.h src/matrix.cpp include/matrix.h
 	g++ -c src/amgSolver.cpp -Iinclude -O2 -O3 -Ofast
 
 clean:

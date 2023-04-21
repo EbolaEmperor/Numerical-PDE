@@ -8,6 +8,7 @@
 #include <ctime>
 #include <iomanip>
 
+using std::string;
 using std::sort;
 using std::vector;
 using std::max;
@@ -177,13 +178,24 @@ ColVector amgSolver::VC(const int &d, ColVector x, const ColVector &rhs){
     return x;
 }
 
-ColVector amgSolver::solve(const ColVector &rhs, const int &maxIter, const double &eps){
+ColVector amgSolver::FMG(const int &d, const ColVector &rhs){
+    if(rhs.size() <= AMG_DIRECT_N){
+        return Ah[d].LUsolve(rhs);
+    }
+    return VC(d, Ph[d] * FMG(d+1, Rh[d]*rhs), rhs);
+}
+
+ColVector amgSolver::solve(const ColVector &rhs, const string & method, const int &maxIter, const double &eps){
     cout << "--------------------------------------------------------------" << endl;
     cout << "Solving..." << endl;
     int timest = clock();
-    ColVector res(rhs.size());
+    ColVector res(rhs.size()), newres;
     for(int T = 0; T < maxIter; T++){
-        ColVector newres = VC(0, res, rhs);
+        if(method == "V"){
+            newres = VC(0, res, rhs);
+        } else {
+            newres = res + FMG(0, rhs-Ah[0]*res);
+        }
         double relative_err = vecnorm(newres-res, 0);
         cout << "Iteration " << T+1 << ":  residual=" << vecnorm(Ah[0]*newres-rhs, 0) << "  relative_error=" << relative_err << endl;
         res = newres;

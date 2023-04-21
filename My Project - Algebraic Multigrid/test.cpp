@@ -52,7 +52,7 @@ SparseMatrix getA9(const int &n){
 }
 
 int main(){
-    const int n = 256;
+    const int n = 1024;
     double h = 1.0/n;
     ColVector b((n-1)*(n-1));
     for(int i = 1; i < n; i++)
@@ -61,7 +61,7 @@ int main(){
         }
     amgSolver solver;
     solver.generateGrid(getA(n));
-    ColVector sol = solver.solve(b, 20, 1e-12);
+    ColVector sol = solver.solve(b, "FMG", 20, 1e-12);
 
     double maxerr = 0;
     for(int i = 1; i < n; i++)
