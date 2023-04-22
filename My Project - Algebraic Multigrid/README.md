@@ -11,3 +11,15 @@
 ```
 
 上面的`FMG`是Cycle的类型，可以选择`FMG`或`V`；`20`是最大迭代次数，`1e-12`是终止误差（以相对误差的无穷范数计），二者达成任何一个条件即终止迭代。
+
+当网格较大时，请关闭系统的栈空间限制，否则会发生Segmentation Fault. 在Linux系统中，您可以运行命令：
+ 
+```bash
+    ulimit -s unlimited 
+```
+
+编译方式：假设你的文件名是`youCode.cpp`，使用如下命令编译：
+
+```bash
+g++ youCode.cpp src/*.cpp -Iinclude -O2 -O3 -Ofast
+```

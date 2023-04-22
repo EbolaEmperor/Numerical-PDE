@@ -45,7 +45,7 @@ void avlTree::increse(avlNode* rt, const int &k, const int &x){
 
 void avlTree::setzero(avlNode* rt, const int &k){
     if(!rt->lson && k==0 || rt->lson && k == rt->lson->size){
-        rt->val = 0;
+        rt->val = -1;
     } else if(!rt->lson || k > rt->lson->size){
         setzero(rt->rson, rt->lson ? k-(rt->lson->size+1) : k-1);
     } else {

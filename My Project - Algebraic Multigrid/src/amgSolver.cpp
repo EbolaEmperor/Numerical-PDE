@@ -16,8 +16,8 @@ using std::cout;
 using std::endl;
 
 const int AMG_DIRECT_N = 16;
-const int AMG_SMOOTH_ITER = 5;
-const double AMG_STRONG_THERESHOLD = 0.2;
+const int AMG_SMOOTH_ITER = 3;
+const double AMG_STRONG_THERESHOLD = 0.5;
 
 vector<int> amgSolver::getCorsetPoints(const SparseMatrix &A){
     vector<int> corsetPoints;
@@ -26,9 +26,18 @@ vector<int> amgSolver::getCorsetPoints(const SparseMatrix &A){
     // dependence[i]: 强依赖i的点集
     vector<int> dependence[n], influence[n];
     for(int i = 0; i < n; i++){
-        vector<int> nonzeros = A.nonzeroIndexInRow(i);
-        for(int j : nonzeros){
+        vector<int> neighbors = A.nonzeroIndexInRow(i);
+        vector<double> vals = A.nonzeroValueInRow(i);
+        // 计算非对角元的最大绝对值
+        double max_nondiag = 0;
+        for(int idj = 0; idj < neighbors.size(); idj++){
+            int j = neighbors[idj];
             if(i == j) continue;
+            max_nondiag = max( max_nondiag, fabs(vals[idj]) );
+        }
+        for(int idj = 0; idj < neighbors.size(); idj++){
+            int j = neighbors[idj];
+            if(i == j || fabs(vals[idj]) < AMG_STRONG_THERESHOLD*max_nondiag) continue;
             influence[i].push_back(j);
             dependence[j].push_back(i);
         }
@@ -63,6 +72,7 @@ vector<int> amgSolver::getCorsetPoints(const SparseMatrix &A){
         }
     }
 
+    delete [] isAssigned;
     return corsetPoints;
 }
 
@@ -70,6 +80,7 @@ SparseMatrix amgSolver::getInterpolator(const SparseMatrix &A){
     vector<Triple> elements;
     vector<int> corsetPoints = getCorsetPoints(A);
     sort(corsetPoints.begin(), corsetPoints.end());
+    //for(int x : corsetPoints) cout << x << ","; cout << endl;
     const int n = A.rowSize();
 
     // rankCorsetPoint[i]: 细网格中编号为i的点在粗网格中的编号，若i不是粗网格点，用-1标记

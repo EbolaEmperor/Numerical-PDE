@@ -29,7 +29,7 @@ SparseMatrix getA(const int &n){
 }
 
 int main(){
-    const int n = 1024;
+    const int n = 256;
     double h = 1.0/n;
     ColVector b((n-1)*(n-1));
     for(int i = 1; i < n; i++)

@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <iostream>
 #include <cstring>
-#include <map>
+#include <unordered_map>
 using namespace std;
 
 SparseMatrix::SparseMatrix(){
@@ -252,7 +252,7 @@ double SparseMatrix::operator () (const int &i, const int &j) const{
 }
 
 SparseMatrix SparseMatrix::operator * (const SparseMatrix &rhs) const{
-    map<long long, double> f;
+    unordered_map<long long, double> f;
     for(int i = 0; i < n; i++)
         for(int c = row_index[i]; c < row_index[i+1]; c++){
             int k = elements[c].j;
@@ -260,23 +260,12 @@ SparseMatrix SparseMatrix::operator * (const SparseMatrix &rhs) const{
                 f[ 1ll*i*rhs.m + rhs.elements[s].j ] += elements[c].value * rhs.elements[s].value;
             }
         }
-    SparseMatrix res(n, rhs.m);
-    res.size = f.size();
-    res.elements = new SparseElement[res.size];
-    res.row_index = new int[n+1];
-    int idx = 0, pre_r = 0;
-    res.row_index[0] = 0;
+    vector<Triple> elem;
     for(auto p : f){
+    	if(fabs(p.second)<1e-16) continue;
         int r = p.first / rhs.m;
         int c = p.first - 1ll*rhs.m*r;
-        if(r > pre_r){
-            for(int i = pre_r+1; i <= r; i++)
-                res.row_index[i] = idx;
-            pre_r = r;
-        }
-        res.elements[idx++] = SparseElement(c, p.second);
+        elem.push_back(Triple(r,c,p.second));
     }
-    for(int i = pre_r+1; i <= n; i++)
-        res.row_index[i] = idx;
-    return res;
+    return SparseMatrix(n, rhs.m, elem);
 }
