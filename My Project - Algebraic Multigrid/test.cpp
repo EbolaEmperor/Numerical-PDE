@@ -2,17 +2,12 @@
 #include <iostream>
 using namespace std;
 
-double sqr(double x){
-    return x*x;
-}
-
 double u(double x, double y){
-    return sin(x*(1-x)*y*(1-y));
+    return exp(sin(x)+y);
 }
 
 double f(double x, double y){
-    return (sqr(x-1)*sqr(x)*sqr(1-2*y) + sqr(1-2*x)*sqr(y-1)*sqr(y)) * sin((x-1)*x*(y-1)*y)
-           - 2*((x-1)*x + (y-1)*y)*cos((x-1)*x*(y-1)*y);
+    return -(1-sin(x)+cos(x)*cos(x))*exp(sin(x)+y);
 }
 
 int IDX(int n, int i, int j){
@@ -33,24 +28,6 @@ SparseMatrix getA(const int &n){
     return SparseMatrix((n-1)*(n-1), (n-1)*(n-1), els);
 }
 
-SparseMatrix getA9(const int &n){
-    double h = 1.0/n;
-    vector<Triple> els;
-    for(int i = 1; i < n; i++)
-        for(int j = 1; j < n; j++){
-            els.push_back(Triple(IDX(n,i,j), IDX(n,i,j), 8.0/(3*h*h)));
-            if(i>1) els.push_back(Triple(IDX(n,i,j), IDX(n,i-1,j), -1.0/(3*h*h)));
-            if(i<n-1) els.push_back(Triple(IDX(n,i,j), IDX(n,i+1,j), -1.0/(3*h*h)));
-            if(j>1) els.push_back(Triple(IDX(n,i,j), IDX(n,i,j-1), -1.0/(3*h*h)));
-            if(j<n-1) els.push_back(Triple(IDX(n,i,j), IDX(n,i,j+1), -1.0/(3*h*h)));
-            if(i>1 && j>1) els.push_back(Triple(IDX(n,i,j), IDX(n,i-1,j-1), -1.0/(3*h*h)));
-            if(i>1 && j<n-1) els.push_back(Triple(IDX(n,i,j), IDX(n,i-1,j+1), -1.0/(3*h*h)));
-            if(i<n-1 && j>1) els.push_back(Triple(IDX(n,i,j), IDX(n,i+1,j-1), -1.0/(3*h*h)));
-            if(i<n-1 && j<n-1) els.push_back(Triple(IDX(n,i,j), IDX(n,i+1,j+1), -1.0/(3*h*h)));
-        }
-    return SparseMatrix((n-1)*(n-1), (n-1)*(n-1), els);
-}
-
 int main(){
     const int n = 1024;
     double h = 1.0/n;
@@ -58,10 +35,14 @@ int main(){
     for(int i = 1; i < n; i++)
         for(int j = 1; j < n; j++){
             b(IDX(n,i,j)) = f(i*h, j*h);
+            if(i==1) b(IDX(n,i,j)) += u(0, j*h) / (h*h);
+            if(i==n-1) b(IDX(n,i,j)) += u(1, j*h) / (h*h);
+            if(j==1) b(IDX(n,i,j)) += u(i*h, 0) / (h*h);
+            if(j==n-1) b(IDX(n,i,j)) += u(i*h, 1) / (h*h);
         }
     amgSolver solver;
     solver.generateGrid(getA(n));
-    ColVector sol = solver.solve(b, "FMG", 20, 1e-12);
+    ColVector sol = solver.solve(b, "FMG", 20, 1e-9);
 
     double maxerr = 0;
     for(int i = 1; i < n; i++)
