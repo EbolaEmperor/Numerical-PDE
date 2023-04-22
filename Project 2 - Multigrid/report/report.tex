@@ -9,7 +9,7 @@
 
 \logo{logo-blue.jpg}
 \cover{cover.jpeg}
-
+\usepackage{multirow}
 \usepackage{xpatch}
 \makeatletter
 \xpatchcmd{\chapter}
@@ -38,7 +38,7 @@
 
 \section{编译与测试说明}
 
-若想编译并运行本文的所有测试，请在项目根目录下执行：
+若想编译并运行本文的所有测试（不包含第六章），请在项目根目录下执行：
 \begin{lstlisting}
   make run
 \end{lstlisting}
@@ -2217,7 +2217,314 @@ full-weighting + 二次插值   & 6  & 5 & 5 & 4 & 4 & 3 \\
   对于二维不规则区域中的的齐次Dirichlet边值问题，采用扭曲网格离散，只需要一次FMG-Cycle迭代，就能够达到$O(h^2)$精度，计算耗时$O(n^2)$。
 \end{theorem}
 
-\vspace{5em}
+\newpage
+
+\chapter{代数多重网格}
+
+在这一章中，我们实现了一个代数多重网格求解器，并设计了一些数据进行测试。我们为AMG的代码单独创建了一个独立于前文的项目，若想使用本章实现的AMG求解器，请看项目中的README文件。
+
+\section{算法描述}
+
+\subsection{背景与介绍}
+
+代数多重网格（AMG）是几何多重网格的一个自然推广，当我们发现由偏微分方程引出的离散方程组，使用多重网格具有如此优秀的表现时，自然会想，能不能将其推广到更一般的方程组，解更一般的大型稀疏矩阵。
+
+答案是肯定的，这就是代数多重网格。具体而言，代数多重网格对$M$矩阵具有较好的表现，$M$矩阵是满足正定对称、对角元为正数、非对角元非正的矩阵。事实上，大部分椭圆方程的离散矩阵都是$M$矩阵。
+
+对一个$n\times n$的矩阵$A^h$，我们不妨将$1,...,n$看作点，将$A^h$看作一个邻接矩阵，这样我们就得到了一个稀疏图，于是就有了网格结构。
+
+要想应用多重网格的思路，我们必须将方程限制到粗网格中，求解后返回细网格调整。但此时我们面临着严峻的问题：我们不知道网格的结构，只知道一个矩阵。我们需要一些算法来选取粗网格点$\Omega^{2h}$，并且定义限制算子$I_{h}^{2h}$与插值算子$I_{2h}^{h}$，还要给出粗网格上的矩阵$A^{2h}$。
+
+\subsection{选取粗网格点}
+
+要想从中选取粗网格点，首先给出如下定义：
+
+\begin{definition}
+  若$i,j$满足：
+  \begin{equation}
+    |a_{i,j}|\geq \theta\max_{k\neq i}|a_{i,k}|
+  \end{equation}
+
+  则称$i$强依赖于$j$，也称$j$强影响$i$. 其中$\theta$是一个事先给定的阈值.
+
+  记$N_i$为所有使$a_{i,j}\neq 0$的点$j$构成的集合，称为“相邻点”集。记$S_i$为所有强影响$i$的点构成的集合，$S_i^T$为所有强依赖于$i$的点构成的集合。
+\end{definition}
+
+在下文中，我们记粗网格$\Omega^{2h}=C$，细网格$\Omega^h=C\cup F$，即$F$表示所有在细网格但不在粗网格中的点。我们还记$C_i=S_i\cap C,\;D_i^s=S_i\cap F,\;D_i^w=N_i\setminus S_i$.
+
+我们希望用一种\textbf{启发式的方法}来选取粗网格点，具体地，我们希望：
+\begin{enumerate}[(1)]
+  \item $\forall i\in F$，对于$j\in S_i$，或$j\in C_i$，或$j$强依赖于$C_i$中某点;
+  \item $C$中的点尽可能多，但需要保持：$\forall i\in C$，没有$j\in C$使得$i$强依赖于$j$。
+\end{enumerate}
+
+当然，我们只是希望上述性质尽可能得到满足，为此，William L. Briggs的书上给出了\textbf{“染色算法”}，如下：
+\begin{enumerate}[1]
+  \item $C,F\gets \varnothing$, $\lambda_i\gets |S_i^T|$.
+  \item 选取$i\in\Omega^h\setminus(C\cup F)$，使$\lambda_i$最大.
+  \item $C\gets C\cup\{i\}$, $F\gets F\cup (S_i^T\setminus C)$.
+  \item $\forall j\in S_i^T,\;\forall k\in S_j\setminus(C\cup F)$, 令$\lambda_k\gets \lambda_k+1$.
+  \item 若$C\cup F=\Omega^h$，结束，否则返回第2步.
+\end{enumerate}
+
+注意到上述过程需要维护一个$\lambda_i$数组，支持增加、删除、求最大下标三种操作，我们期望单次操作的复杂度不超过$O(\log n)$，因此我们实现了一个\textbf{二叉搜索树}。当然，使用线段树、平衡树也是可以的，不过因为可以提前建树，所以平衡操作是不必要的。
+
+\subsection{构建插值算子}
+
+对于$\mathbf{e}\in\Omega^{2h}$，插值算子具有如下格式：
+\begin{equation}
+  (I_{2h}^h \mathbf{e})_i=\left\{
+    \begin{array}{ll}
+      e_i & \text{若 }i\in C,\\
+      \sum_{j\in C_i}\omega_{ij}e_j & \text{若 }i\in F.
+    \end{array}
+  \right.
+\end{equation}
+
+在粗网格中，我们求解的方程是$A^{2h}\mathbf{e}=\mathbf{f}$，其中$\mathbf{f}$是光滑化（即若干次G-S迭代）后的残差，通常比较小，因此
+\begin{equation*}
+  a_{ii}e_i\approx -\sum_{j\in N_i} a_{ij}e_j.
+\end{equation*}
+
+将$N_i$展开成三类，得
+\begin{equation}
+  a_{ii}e_i\approx -\sum_{j\in C_i} a_{ij}e_j -\sum_{j\in D^s_i} a_{ij}e_j -\sum_{j\in D^w_i} a_{ij}e_j.
+\end{equation}
+
+对于$j\in D^w_i$，将$e_j$近似为$e_i$，得
+\begin{equation}
+  \left(a_{ii}+\sum_{j\in D^w_i} a_{ij}\right)e_i\approx -\sum_{j\in C_i} a_{ij}e_j -\sum_{j\in D^s_i} a_{ij}e_j.
+\end{equation}
+
+对于$e_j\in D_i^s$，将其近似为
+\begin{equation}
+  e_j\approx \frac{\sum_{k\in C_i} a_{jk}e_k}{\sum_{k\in C_i} a_{jk}}.
+\end{equation}
+
+将(6.5)代入(6.4)，得
+\begin{equation}
+  \omega_{ij}=-\frac{a_{ij}+\sum\limits_{m\in D_i^s}\left(\frac{a_{im}a_{mj}}{\sum\limits_{k\in C_i} a_{mk}}\right)}{a_{ii}+\sum\limits_{n\in D_i^w} a_{in}}
+\end{equation}
+
+本小节内容均来源于William L. Briggs的书，我们实现了上述过程，同时对反复使用的求和进行了预处理优化，能在$O(N_i)$的时间里完成单个$\omega_{ij}$的计算。
+
+\subsection{构建限制算子与粗网格矩阵$A^{2h}$}
+
+事实上，有了插值算子，我们可以直接由对称性和Garlerkin条件构建$I_{h}^{2h}$与$A^{2h}$，如下：
+\begin{equation}
+  I_{h}^{2h}:=(I_{2h}^{h})^T
+\end{equation}
+\begin{equation}
+  A^{2h}:=I_{h}^{2h}A^hI_{2h}^{h}
+\end{equation}
+
+\subsection{V-Cycle}
+
+实际上，代数多重网格的V-Cycle与几何多重网格基本一致，只不过使用的$A^h,I_h^{2h},I_{2h}^h$都是事先构建好的。为方便表述，记\verb|Rh|为$I_{h}^{2h}$，\verb|Ph|为$I_{2h}^{h}$，下面以递归形式描述。
+
+\begin{lstlisting}
+    VC(h, x, f)
+        if size of grid <= 16
+            return direct_solve(Ah, f)
+        pre-smoothing for v1 times
+        e = VC(2h, zeros, Rh*(f-Ah*x))
+        x = x + Ph * e
+        post-smoothing for v2 times
+        return x
+\end{lstlisting}
+
+有了V-Cycle，自然可以定义FMG-Cycle.
+
+\section{数值实验}
+
+\subsection{与几何多重网格的对比测试}
+
+这一节中，我们以问题(4.1)为例进行测试，并与几何多重网格、直接法对比。迭代方式均选择FMG-Cycle，几何多重网格的限制算子与插值算子采用full-weighting与二次插值。下面是测试结果，单位均为秒。
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{ccccccc}
+  \multicolumn{2}{c}{\textbf{$n$}}                                           & 64    & 128   & 256   & 512   & 1024  \\ \hline
+  \multicolumn{1}{c|}{\multirow{3}{*}{代数多重网格}} & \multicolumn{1}{c|}{生成网格耗时} & 0.028 & 0.108 & 0.464 & 2.1   & 9.91  \\
+  \multicolumn{1}{c|}{}                        & \multicolumn{1}{c|}{迭代耗时}   & 0.016 & 0.053 & 0.213 & 0.874 & 3.86  \\
+  \multicolumn{1}{c|}{}                        & \multicolumn{1}{c|}{总耗时}    & 0.044 & 0.161 & 0.677 & 2.974 & 13.77 \\ \cline{1-2}
+  \multicolumn{2}{c|}{几何多重网格耗时}                                                & 0.025 & 0.090 & 0.351 & 1.182 & 3.835 \\ \cline{1-2}
+  \multicolumn{2}{c|}{直接法耗时}                                                   & 0.42  & 8.168 & -     & -     & -    
+  \end{tabular}
+\end{table}
+
+代数多重网格与几何多重网格的求解误差没有差异。从速度上看，代数多重网格要比几何多重网格慢，尤其是网格巨大时，差异明显。但是比起直接法仍然具有巨大优势。此外，我们可以看到，代数多重网格的大部分耗时都在生成网格，迭代反而是快的。另外，当使用AMG时，$n$不一定要是$2$的幂次，它可以是任意正整数，这给了我们更大的自由。
+
+在生成网格的过程中，运算矩阵$A^h$保持了良好的稀疏性质。以$n=1024$为例，共生成了10级网格，生成的各级矩阵信息如下：
+
+\begin{lstlisting}
+  level 1:    size=1046529   density=0.000477396%
+  level 2:    size=523265    density=0.00171698%
+  level 3:    size=131072    density=0.00684262%
+  level 4:    size=32768     density=0.0272753%
+  level 5:    size=8192      density=0.108334%
+  level 6:    size=2048      density=0.424337%
+  level 7:    size=512       density=1.63803%
+  level 8:    size=128       density=6.09131%
+  level 9:    size=32        density=20.8984%
+  level 10:   size=8         density=65.625%  
+\end{lstlisting}
+
+可以看到，除了第一次粗化时网格大小只缩小了$\frac{1}{2}$，在之后的粗化中，网格大小都缩小到了大约$\frac{1}{4}$.
+
+下面我们来观察对于方程(4.1)，代数多重网格生成的各级网格形状如何。为便于观察，初始网格不取太大，我们以$n=16$为例。各级网格如下图所示，图中实心点为粗网格选取的点。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.32\linewidth}
+      \centering
+      \includegraphics[width=\linewidth]{figure/4-1-1.eps}
+      \caption*{\small 第一次粗化}
+  \end{minipage}
+  \hspace{.5em}
+  \begin{minipage}[t]{0.32\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/4-1-2.eps}
+    \caption*{\small 第二次粗化}
+  \end{minipage}
+  \hspace{.5em}
+  \begin{minipage}[t]{0.32\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/4-1-3.eps}
+    \caption*{\small 第三次粗化}
+  \end{minipage}
+\end{figure}
+
+虽然与我们第四章中的粗网格选取不一致，但这也是符合直觉的。事实上，如果采用九点离散格式(4.19)，那么AMG生成的各级网格与第四章中粗网格的选取一致。
+
+\subsection{不规则方程的测试}
+
+我们考虑如下形式的方程：
+\begin{equation}
+  -au_{xx}-cu_{yy}+bu_{xy}=f(x,y).
+\end{equation}
+
+其中各系数在不同区域取不同值，如下：
+\begin{align*}
+  (0,\frac{1}{2})\times (0,\frac{1}{2})&: a=1,\;b=0,\;c=1 \\
+  [\frac{1}{2},1)\times (0,\frac{1}{2})&: a=2,\;b=0,\;c=1 \\
+  (0,\frac{1}{2})\times [\frac{1}{2},1)&: a=1,\;b=0,\;c=2 \\
+  [\frac{1}{2},1)\times [\frac{1}{2},1)&: a=1,\;b=\frac{1}{2},\;c=1
+\end{align*}
+
+用精确解$u(x,y)=e^{\sin(x)+y}$诱导一个上述形式的方程。对$n=64,128,...,1024$的网格进行测试，结果如下。
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{ccccccc}
+  \multicolumn{2}{c}{\textbf{$n$}}                                           & 64    & 128   & 256   & 512   & 1024  \\ \hline
+  \multicolumn{1}{c|}{\multirow{3}{*}{求解耗时}} & \multicolumn{1}{c|}{生成网格耗时} & 0.030 & 0.123 & 0.56 & 3.3   & 15.7  \\
+  \multicolumn{1}{c|}{}                        & \multicolumn{1}{c|}{迭代耗时}   & 0.052 & 0.419 & 4.3 & 29.5 &  251 \\
+  \multicolumn{1}{c|}{}                        & \multicolumn{1}{c|}{总耗时}    & 0.082 & 0.542 & 4.86 & 32.8 & 266.7 \\ \cline{1-2}
+  \multicolumn{2}{c|}{生成网格层数}                                                & 7 & 8 & 9 & 11 & 12 \\ \cline{1-2}
+  \multicolumn{2}{c|}{求解精度（以无穷范数计）}                                                   &  $7.19\times 10^{-6}$ & $1.80\times 10^{-6}$ & $4.52\times 10^{-7}$   & $1.16\times 10^{-7}$    &  $3.71\times 10^{-8}$
+  \end{tabular}
+\end{table}
+
+我们发现，在这项测试中，AMG的收敛速度明显变慢。与规则网格中的情况完全相反，迭代过程开始占据主要时间。在$n=1024$的实验中，FMG-Cycle的迭代次数达到了惊人的202次！
+
+以$n=1024$为例，共生成了12级网格，生成的各级矩阵信息如下：
+\begin{lstlisting}
+  level 1:     size=1046529    density=0.000525173%
+  level 2:     size=523265     density=0.00200327%
+  level 3:     size=179587     density=0.00899713%
+  level 4:     size=55659      density=0.0325168%
+  level 5:     size=21297      density=0.0888035%
+  level 6:     size=9576       density=0.258347%
+  level 7:     size=3283       density=0.768179%
+  level 8:     size=1220       density=2.56477%
+  level 9:     size=402        density=5.89218%
+  level 10:    size=142        density=12.3289%
+  level 11:    size=39         density=28.3366%
+  level 12:    size=15         density=49.3333%
+\end{lstlisting}
+
+以$n=16$为例，生成的各级网格形状如下图所示，可以发现生成的网格极度不规则。
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.32\linewidth}
+      \centering
+      \includegraphics[width=\linewidth]{figure/4-1-1.eps}
+      \caption*{\small 第一次粗化}
+  \end{minipage}
+  \hspace{.5em}
+  \begin{minipage}[t]{0.32\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/4-2-1.eps}
+    \caption*{\small 第二次粗化}
+  \end{minipage}
+  \hspace{.5em}
+  \begin{minipage}[t]{0.32\linewidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{figure/4-2-2.eps}
+    \caption*{\small 第三次粗化}
+  \end{minipage}
+\end{figure}
+
+\subsection{一个简单的随机游走问题}
+
+在本节中，我们试图解决这样一个随机游走问题：
+
+\begin{postulate}
+  给定一个$(0...n,0...n)$的网格，一个机器人从$(0,0)$出发，每次等可能地走到网格中的一个相邻点，当到达$(n,n)$时，停止游走。试求走过总步数的期望。
+
+  其中有一些网格点是“坏点”，机器人不会走到这些点上。
+\end{postulate}
+
+事实上，设$E_i$为从$i$号点出发，到结束还需步数的期望，记$N_i$为$i$号点的相邻点集，我们不难列出下面的方程：
+\begin{equation}
+  E_i=1+\frac{1}{|N_i|}\sum_{j\in N_i}E_j,\quad i=1,2,...,n-1.
+\end{equation}
+
+此外我们有边界条件$E_{\text{id}(n,n)}=0$. 求解上述方程组，得到$E_{\text{id}(0,0)}$即为问题的解。我们使用AMG求解，并使用蒙特卡洛法、Gauss-Seidel迭代法求解此问题以进行对比，终止的相对误差设置为$10^{-6}$。结果如下。
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{cccccccc}
+  \multicolumn{2}{c}{\textbf{$n$}}                                           & 5          & 10   & 20   & 40   & 80 & 160  \\ \hline
+  \multicolumn{1}{c|}{\multirow{3}{*}{代数多重网格}} & \multicolumn{1}{c|}{生成网格耗时} & 0  & 0 & 0.003 & 0.012   & 0.046 & 0.158 \\
+  \multicolumn{1}{c|}{}                        & \multicolumn{1}{c|}{迭代耗时}   & 0       & 0.002 & 0.027 & 0.181 & 2.68 & 27 \\
+  \multicolumn{1}{c|}{}                        & \multicolumn{1}{c|}{总耗时}    & 0       & 0.002 & 0.030 & 0.193 & 2.726 & 27.158 \\ \cline{1-2}
+  \multicolumn{2}{c|}{Gauss-Seidel迭代法耗时}                                                & 0.001 & 0.023 & 0.313 & 6.6 & - & - \\ \cline{1-2}
+  \multicolumn{2}{c|}{蒙特卡洛法耗时}                                                   & 4.01  & - & -     & -     & -    & -\\ \cline{1-2}
+  \multicolumn{2}{c|}{方程解与蒙特卡洛法的相对误差}                                    & 0.03  & - & -     & -     & -    & -
+  \end{tabular}
+\end{table}
+
+蒙特卡洛法需要大量的模拟才能得到更为精确的结果，这里只是为了验证方程的正确性，不必对精度做太高要求，只要方程解和它的相对误差不超过$0.1$就可以认为方程是正确的。
+
+在这个问题中，AMG生成的网格也是非常不规则的，以$n=20$为例，生成的各级网格形状如下图所示。
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[t]{0.45\linewidth}
+      \centering
+      \includegraphics[width=0.7\linewidth]{figure/4-3-1.eps}
+      \caption*{\small 第一次粗化}
+  \end{minipage}
+  \begin{minipage}[t]{0.45\linewidth}
+    \centering
+    \includegraphics[width=0.7\linewidth]{figure/4-3-2.eps}
+    \caption*{\small 第二次粗化}
+  \end{minipage}
+  \begin{minipage}[t]{0.45\linewidth}
+    \centering
+    \includegraphics[width=0.7\linewidth]{figure/4-3-3.eps}
+    \caption*{\small 第三次粗化}
+  \end{minipage}
+  \begin{minipage}[t]{0.45\linewidth}
+    \centering
+    \includegraphics[width=0.7\linewidth]{figure/4-3-4.eps}
+    \caption*{\small 第四次粗化}
+  \end{minipage}
+\end{figure}
+
+\newpage
 
 \chapter{总结}
 
@@ -2231,7 +2538,9 @@ full-weighting + 二次插值   & 6  & 5 & 5 & 4 & 4 & 3 \\
 
 在本文里，我们特别关注误差的分布，在每一个测试中，我们几乎都给出了误差分布的图，这些图均由matlab生成。关注这些图可以让我们更好地了解求解器的表现。
 
-另外，我们做了二维规则情形下的一些理论分析。不过不规则情况下，给出$\rho(TG)<0.1$的方式不够严格，并没有像一维、二维规则情形中那样分析特征值与特征向量。但这是因为扭曲网格法中，特征值与特征向量无法准确给出，因此我们也难以严格分析。
+我们做了二维规则情形下的一些理论分析。不过不规则情况下，给出$\rho(TG)<0.1$的方式不够严格，并没有像一维、二维规则情形中那样分析特征值与特征向量。但这是因为扭曲网格法中，特征值与特征向量无法准确给出，因此我们也难以严格分析。
+
+另外，我们对大型稀疏矩阵方程的求解非常感兴趣，因此非常希望能将多重网格法推广。为此，我们根据William L. Briggs等人的书，实现了一个代数多重网格（AMG）求解器，并进行了一些测试，不过结果并没有完全符合我们的期待，AMG对矩阵性质的要求仍然过于苛刻。
 
 最后，我想说“我们”并不是指一群人，而仅仅是指作者一个人，使用复数人称只是作者的行文习惯。
 

@@ -413,7 +413,7 @@
   \newcommand{\definitionname}{定义}
   \newcommand{\theoremname}{定理}
   \newcommand{\axiomname}{公理}
-  \newcommand{\postulatename}{公设}
+  \newcommand{\postulatename}{问题}
   \newcommand{\lemmaname}{引理}
   \newcommand{\propositionname}{命题}
   \newcommand{\corollaryname}{推论}
