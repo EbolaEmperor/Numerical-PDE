@@ -1,0 +1,11 @@
+{
+    "Problem": "Stability Problem",
+    "Method": "Adaptive ESDIRK",
+    "Init": [1],
+    "T": 1,
+    "eps": 1e-6,
+    "Richardson Error Estimate": false,
+    "Output": true,
+    "Dense Output": false,
+    "Dense-Discrete Output": false
+}

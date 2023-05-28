@@ -1,0 +1,9 @@
+{
+    "Method": "Beam-Warming",
+    "Left": -2,
+    "Right": 25,
+    "Space Step": 0.05,
+    "End Time": 100,
+    "Time Step": 0.05,
+    "Output Skip": 4
+}

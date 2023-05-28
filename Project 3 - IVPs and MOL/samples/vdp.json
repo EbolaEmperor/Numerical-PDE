@@ -1,0 +1,13 @@
+{
+    "Problem": "Van der Pol Problem",
+    "Method": "Adaptive Radau-IIA",
+    "Order": 3,
+    "Init": [2, 0],
+    "T": 3000,
+    "Max Step": 100,
+    "eps": 1e-6,
+    "Richardson Error Estimate": false,
+    "Output": true,
+    "Dense Output": false,
+    "Dense-Discrete Output": false
+}

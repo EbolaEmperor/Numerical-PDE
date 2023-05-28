@@ -1,0 +1,15 @@
+{
+   "Dense Output" : false,
+   "Dense-Discrete Output" : false,
+   "Grid Size" : 95000,
+   "Init" : [ 0.99399999999999999, 0, 0, 0, -2.0015851063790824, 0 ],
+   "Mass Ratio" : 0.012277471,
+   "Method" : "Adams-Moulton",
+   "Order" : 5,
+   "Output" : false,
+   "Periodic" : 1,
+   "Problem" : "Restricted 3-Body Problem",
+   "Richardson Error Estimate" : false,
+   "T" : 17.065216560157964
+}
+

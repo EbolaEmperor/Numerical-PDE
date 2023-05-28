@@ -1,0 +1,16 @@
+{
+   "Dense Output" : false,
+   "Dense-Discrete Output" : false,
+   "Grid Size" : 4000,
+   "Init" : [ 0.87977922777799999, 0, 0, 0, -0.37967778094900001, 0 ],
+   "Mass Ratio" : 0.012277471,
+   "Method" : "Gauss-Legendre",
+   "Order" : 2,
+   "Output" : false,
+   "Periodic" : 1,
+   "Problem" : "Restricted 3-Body Problem",
+   "Richardson Error Estimate" : true,
+   "Convergence Analysis" : true,
+   "T" : 19.140540691377002
+}
+

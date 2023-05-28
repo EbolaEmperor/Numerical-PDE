@@ -1,0 +1,13 @@
+{
+   "Dense Output" : false,
+   "Dense-Discrete Output" : false,
+   "Grid Size" : 50,
+   "Init" : [ 1 ],
+   "Method" : "Radau-IIA",
+   "Order" : 4,
+   "Output" : true,
+   "Problem" : "Stability Problem",
+   "Richardson Error Estimate" : false,
+   "T" : 1
+}
+

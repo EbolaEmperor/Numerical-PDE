@@ -1,0 +1,15 @@
+A = load("result-dense.txt");
+n = size(A,1);
+m = size(A,2);
+A(:,1) = zeros(n,1);
+A = [A, zeros(n,1)];
+t = 0:0.01:1;
+plot(t, A(2,:), '-');
+ylim([-0.001, 0.5]);
+saveas(gcf, 'report/figures/heat-e-1-1.eps');
+plot(t, A(3,:), '-');
+ylim([-0.001, 0.5]);
+saveas(gcf, 'report/figures/heat-e-1-2.eps');
+plot(t, A(11,:), '-');
+ylim([-0.001, 0.5]);
+saveas(gcf, 'report/figures/heat-e-1-3.eps');

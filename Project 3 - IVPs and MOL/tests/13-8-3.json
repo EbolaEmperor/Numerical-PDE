@@ -1,0 +1,15 @@
+{
+   "Dense Output" : false,
+   "Dense-Discrete Output" : false,
+   "Grid Size" : 20000,
+   "Init": [0.879779227778, 0, 0, 0, -0.379677780949, 0],
+   "T": 19.140540691377,
+   "Mass Ratio" : 0.012277471,
+   "Method" : "BDF",
+   "Order" : 4,
+   "Output" : false,
+   "Periodic" : 1,
+   "Problem" : "Restricted 3-Body Problem",
+   "Richardson Error Estimate" : true
+}
+

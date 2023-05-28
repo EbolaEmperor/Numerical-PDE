@@ -1,0 +1,10 @@
+{
+    "Method": "Dormand-Prince",
+    "Space Section": 500,
+    "End Time": 0.5,
+    "Max Step": 0.01,
+    "Tolerance": 1e-8,
+    "Output": false,
+    "Dense-Discrete Output": true,
+    "Dense-Discrete Output Step": 0.0025
+}

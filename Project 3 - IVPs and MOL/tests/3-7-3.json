@@ -1,0 +1,13 @@
+{
+   "Dense Output" : false,
+   "Dense-Discrete Output" : false,
+   "Grid Size" : 500,
+   "Init" : [ 1 ],
+   "Method" : "Gauss-Legendre",
+   "Order" : 3,
+   "Output" : true,
+   "Problem" : "Stability Problem",
+   "Richardson Error Estimate" : false,
+   "T" : 1
+}
+

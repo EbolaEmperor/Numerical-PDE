@@ -1,0 +1,13 @@
+{
+    "Problem": "Stiff Sample Problem",
+    "Method": "Adaptive Radau-IIA",
+    "Order": 3,
+    "Init": [1.5],
+    "T": 3,
+    "Max Step": 0.3,
+    "eps": 1e-6,
+    "Richardson Error Estimate": false,
+    "Output": true,
+    "Dense Output": false,
+    "Dense-Discrete Output": true
+}

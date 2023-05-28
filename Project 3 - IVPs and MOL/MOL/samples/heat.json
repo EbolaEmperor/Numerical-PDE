@@ -1,0 +1,11 @@
+{
+    "Method": "Adaptive ESDIRK",
+    "Order": 2,
+    "Space Section": 100,
+    "End Time": 4,
+    "Tolerance": 1e-4,
+    "Max Step": 0.1,
+    "Output": false,
+    "Dense-Discrete Output": true,
+    "Dense-Discrete Output Step": 0.001
+}

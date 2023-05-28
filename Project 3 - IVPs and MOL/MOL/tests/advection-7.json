@@ -1,0 +1,8 @@
+{
+    "Method": "leapfrog",
+    "Left": -2,
+    "Right": 25,
+    "Space Step": 0.05,
+    "End Time": 17,
+    "Time Step": 0.05
+}

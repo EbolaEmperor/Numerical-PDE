@@ -1,0 +1,10 @@
+{
+    "Method": "Gauss-Legendre",
+    "Order": 1,
+    "Space Section": 20,
+    "End Time": 0.025,
+    "Time Section": 10,
+    "Output": true,
+    "Dense-Discrete Output": false,
+    "Dense-Discrete Output Step": 0.001
+}
