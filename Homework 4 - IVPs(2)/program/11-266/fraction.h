@@ -22,6 +22,7 @@ public:
 	fraction(){a=0;b=1;}
 	fraction(const int &_a){a=_a;b=1;}
 	fraction(const int &_a, const int &_b){a=_a;b=_b;}
+	fraction(const long long &_a, const long long &_b){a=_a;b=_b;}
 	fraction(const bigint &_a){a=_a;b=1;}
 	fraction(const bigint &_a, const bigint &_b){a=_a;b=_b;}
 	fraction(const fraction &rhs){a=rhs.a; b=rhs.b;}
@@ -81,6 +82,12 @@ public:
 	fraction operator * (const fraction &y) const{
 		fraction c(a*y.a,b*y.b);
 		c.simp();
+		return c;
+	}
+	fraction operator ^ (const int &y) const{
+		fraction c = 1;
+		for(int i = 0; i < y; i++)
+			c *= (*this);
 		return c;
 	}
 	fraction operator / (const fraction &y) const{

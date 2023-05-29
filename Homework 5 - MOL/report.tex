@@ -1,0 +1,223 @@
+% $Date: 2022/12/30 17:24:03 $
+% This template file is public domain.
+%
+% TUGboat class documentation is at:
+%   http://mirrors.ctan.org/macros/latex/contrib/tugboat/ltubguid.pdf
+% or
+%   texdoc tugboat
+
+\documentclass[twocolumn,10pt]{article}
+\setlength{\columnsep}{.3in}
+\setlength{\columnseprule}{.5pt}
+\pagestyle{empty}
+
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{amsmath}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{array, float}
+\usepackage{caption}
+\usepackage{enumerate}
+\usepackage[hidelinks,pdfa]{hyperref}
+\usepackage[a4paper, total={7.5in, 9.2in}, vcentering]{geometry}
+
+\usepackage{fancyhdr} % 导入fancyhdr包
+\pagestyle{fancy}
+% 页眉设置
+\fancyhead[C]{Numerical PDE Homework \# 5}
+\fancyhead[R]{May 24, 2023}
+\fancyhead[L]{Wenchong Huang}
+\fancyfoot[C]{\thepage} % 页码
+
+%%% Start of metadata %%%
+
+% repeat info for each author; comment out items that don't apply.
+%\ORCID{0}
+% To receive a physical copy of the TUGboat issue, please include the
+% mailing address we should use, as a comment if you prefer it not be printed.
+
+%%% End of metadata %%%
+
+\begin{document}
+
+\section*{\large Exercise 12.81}
+
+Suppose $a\geq 0$, we calculate the LTE as
+\begin{align*}
+    \tau(x,t)=&\frac{u(x,t+k)-u(x,t)}{k}+\frac{a}{2h}(3u(x,t)-4u(x-h,t)\\
+    &+u(x-2h,t))-\frac{a^2k}{2h^2}(u(x,t)-2u(x-h,t)\\&+u(x-2h,t))\\
+    =& u_t+\frac{k}{2}u_{tt}+av_x-\frac{a^2k}{2}v_{xx}+O(k^2+h^2)\\
+    =& O(k^2+h^2).
+\end{align*}
+where the final step follows from $u_t=-au_x$ and $u_{tt}=-au_{tx}=a^2u_{xx}$. It is similar for the case $a<0$.
+
+\vspace{-.5em}
+\section*{\large Exercise 12.82}
+
+\;\;\;\;Here are the reproduced plots.
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/ex_12_82_mu=0.8.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/ex_12_82_mu=1.6.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \vspace{.5em}
+        \includegraphics[width=0.95\linewidth]{figures/ex_12_82_mu=2.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \vspace{.5em}
+        \includegraphics[width=0.95\linewidth]{figures/ex_12_82_mu=2.4.eps}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+See the matlab code in \verb|ex_12_82.m|.
+
+\section*{\large Exercise 12.86}
+
+The numerical domains of dependence of the grid point $(x_j,t_3)$ for the upwind method with $a<0$ and $\mu=0$ is shown as the solid dots below.
+
+\vspace{-.5em}
+\begin{center}
+    \begin{tikzpicture} 
+        \draw[densely dashed][help lines] ( -2.401,0 ) grid[step=0.8cm] ( 2.4, 2.4);
+        \fill (0,0) circle (2pt);
+        \fill (0,0.8) circle (2pt);
+        \fill (0,1.6) circle (2pt);
+        \fill (0,2.4) circle (2pt);
+        \coordinate [label=below:$x_j$] (A) at (0,0);
+        \coordinate [label=left:$t_0$] (B) at (-2.4,0);
+        \coordinate [label=left:$t_3$] (C) at (-2.4,2.4);
+    \end{tikzpicture}
+\end{center}
+
+Also with $\mu=-1$.
+
+\begin{center}
+    \begin{tikzpicture} 
+        \draw[densely dashed][help lines] ( -2.401,0 ) grid[step=0.8cm] ( 2.4, 2.4);
+        \fill (2.4,0) circle (2pt);
+        \fill (1.6,0.8) circle (2pt);
+        \fill (0.8,1.6) circle (2pt);
+        \fill (0,2.4) circle (2pt);
+        \coordinate [label=below:$x_j$] (A) at (0,0);
+        \coordinate [label=below:$x_{j+3}$] (D) at (2.4,0);
+        \coordinate [label=left:$t_0$] (B) at (-2.4,0);
+        \coordinate [label=left:$t_3$] (C) at (-2.4,2.4);
+    \end{tikzpicture}
+\end{center}
+
+And with $\mu=-2$.
+
+\begin{center}
+    \begin{tikzpicture} 
+        \draw[densely dashed][help lines] ( -2.401,0 ) grid[step=0.8cm] ( 2.4, 2.4);
+        \fill (2.4,0) circle (2pt);
+        \fill (1.6,0.8) circle (2pt);
+        \fill (0.8,1.6) circle (2pt);
+        \fill (0,2.4) circle (2pt);
+        \fill (0,1.6) circle (2pt);
+        \fill (0,0.8) circle (2pt);
+        \fill (0,0) circle (2pt);
+        \fill (0.8,0.8) circle (2pt);
+        \fill (0.8,0) circle (2pt);
+        \fill (1.6,0) circle (2pt);
+        \coordinate [label=below:$x_j$] (A) at (0,0);
+        \coordinate [label=below:$x_{j+3}$] (D) at (2.4,0);
+        \coordinate [label=left:$t_0$] (B) at (-2.4,0);
+        \coordinate [label=left:$t_3$] (C) at (-2.4,2.4);
+    \end{tikzpicture}
+\end{center}
+
+\section*{\large Exercise 12.88}
+
+\;\;\;\;When we fix $\mu=1$, (12.83) becomes
+\begin{equation*}
+    U_j^{n+1}=U_{j-1}^n.
+\end{equation*}
+
+The numerical domains of dependence of the grid point $(x_j,t_3)$ for the Lax-Wendroff method with $\mu=1$ is shown as the solid dots below.
+
+\begin{center}
+    \begin{tikzpicture} 
+        \draw[densely dashed][help lines] ( -2.401,0 ) grid[step=0.8cm] ( 2.4, 2.4);
+        \fill (-2.4,0) circle (2pt);
+        \fill (-1.6,0.8) circle (2pt);
+        \fill (-0.8,1.6) circle (2pt);
+        \fill (0,2.4) circle (2pt);
+        \coordinate [label=below:$x_j$] (A) at (0,0);
+        \coordinate [label=below:$\;\;x_{j-3}$] (D) at (-2.4,0);
+        \coordinate [label=left:$t_0\;$] (B) at (-2.4,0);
+        \coordinate [label=left:$t_3\;$] (C) at (-2.4,2.4);
+        \coordinate [label=right:$\;\;$] (BB) at (2.4,0);
+    \end{tikzpicture}
+\end{center}
+
+Also with $\mu=-1$.
+
+\begin{center}
+    \begin{tikzpicture} 
+        \draw[densely dashed][help lines] ( -2.401,0 ) grid[step=0.8cm] ( 2.4, 2.4);
+        \fill (2.4,0) circle (2pt);
+        \fill (1.6,0.8) circle (2pt);
+        \fill (0.8,1.6) circle (2pt);
+        \fill (0,2.4) circle (2pt);
+        \coordinate [label=below:$x_j$] (A) at (0,0);
+        \coordinate [label=below:$x_{j+3}$] (D) at (2.4,0);
+        \coordinate [label=left:$t_0$] (B) at (-2.4,0);
+        \coordinate [label=left:$t_3$] (C) at (-2.4,2.4);
+    \end{tikzpicture}
+\end{center}
+
+\section*{\large Exercise 12.98}
+
+First, replace $U_j^n$ with $v(x,t)$ and we have
+\begin{align*}
+    &\frac{v(x,t+k)-v(x,t)}{k}=-\frac{a}{2h}(3v(x,t)-4v(x-h,t)+\\& v(x-2h,t))+\frac{a^2k}{2h^2}(v(x,t)-2v(x-h,t)+v(x-2h,t)).
+\end{align*}
+
+Second, we expand all terms in Taylor series about $(x,t)$ to derive the modified equation as (for brevity, omit the dependence on $(x,t)$)
+\begin{align*}
+    &v_t+\frac{k}{2}v_{tt}+\frac{k^2}{6}v_{ttt}+O(k^3)=-\frac{a}{2h}(2hv_x-\frac{2}{3}h^3v_{xxx}+\\& O(h^4))+\frac{a^2k}{2h^2}(h^2v_{xx}-h^3v_{xxx}+O(h^4)).
+\end{align*}
+
+Assume $h=O(k)$ and it follows that
+\begin{equation*}
+    v_t+av_x=\frac{a^2}{2}kv_{xx}-\frac{k}{2}v_{tt}+(\frac{a}{3}h^2-\frac{a^2}{2}kh)v_{xxx}-\frac{k^2}{6}v_{ttt}+O(k^3).
+\end{equation*}
+
+Differentiate the above equation and we have
+\begin{align*}
+    v_{ttt}+av_{xtt}&=O(k),\\
+    v_{ttx}+av_{xxt}&=O(k),\\
+    v_{txx}+av_{xxx}&=O(k),\\
+    v_{tt}+av_{xt}&=O(k^2),\\
+    v_{tx}+av_{xx}&=O(k^2).
+\end{align*}
+
+Combining the above equations gives
+\begin{equation*}
+    v_t+av_x=(-\frac{1}{2}a^2kh+\frac{1}{6}a^3k^2+\frac{1}{3}ah^2)v_{xxx}+O(k^3).
+\end{equation*}
+
+Hence we have
+\begin{equation*}
+    v_t+av_x=\frac{ah^2}{6}(2-3\mu+\mu^2)v_{xxx}+O(k^3).
+\end{equation*}
+which implies (12.98). And by Example F.46, we have
+\begin{align*}
+C_p(\xi) &= a+\frac{ah^2}{6}(\mu-1)(\mu-2)\xi^2\\
+C_g(\xi) &= a+\frac{ah^2}{2}(\mu-1)(\mu-2)\xi^2
+\end{align*}
+
+For $\mu\in(0,1)$, both $C_p$ and $C_g$ have a magnitude grater than $|a|$, hence numerical oscillations move ahead of the true wave crest. This answers Question (f) of Example 12.92.
+
+\end{document}
