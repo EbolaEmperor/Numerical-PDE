@@ -51,16 +51,17 @@
     \end{minipage}
 \end{figure} \vspace{-.5em}
 
-The true solution is
+We can construct a solver based on Fourier analysis. Note that the true solution is
 \begin{equation}
     u(t,x)=\sum_{k=1}^\infty A_k e^{-k^2\pi^2t}\sin(k\pi t),
 \end{equation}
 where
 \begin{equation*}
-    A_k=\frac{40}{k^2\pi^2}\left[-\sin\left(\frac{9k\pi}{20}\right)+2\sin\left(\frac{k\pi}{2}\right)-\sin\left(\frac{11k\pi}{20}\right)\right].
+    A_k=2\int_0^1 \varphi(\xi)\sin(k\pi\xi) \text{d}\xi,
 \end{equation*}
+and $\varphi(x)$ is the initial condition. The coefficients $A_k$ could be computed by the adaptive Simpson integration method. For a given tolerance $\varepsilon$, compute the series (1) to $N$ items such that $|A_N|<\varepsilon$ and $|A_{N-1}|<\varepsilon$. We can compute $N$ and $A_1,...,A_N$ by a pre-procedure. And this induced a solver. See \verb|src/trueSol.cpp|.
 
-Plot the true solution by summing up the first $20$ items in the infinite series (1) as follows.
+Compute the true solution by the solver above with $\varepsilon=10^{-3}$ at $t=0.0025,t=0.005$ and $t=0.025$. The series (1) is computed to $37$ items. The results are given as follows.
 
 \vspace{-.3em}\begin{figure}[H]
     \centering
