@@ -3,7 +3,7 @@ using namespace std;
 
 const double pi = acos(-1);
 
-class ForierSolver{
+class FourierSolver{
 private:
     int maxn;
     vector<double> A;
@@ -27,11 +27,23 @@ private:
     }
 
     double integrate(const double &l, const double &r, const double &eps) const{
-        return integrate(l, r, squareIntegrate(l,r), max(1e-4*eps, 1e-15));
+        // 将积分区间随机划分为9个小区间，防止出现因为5个等分点为0导致整个积分返回0的情况
+        int points[10], m;
+        for(int i = 1; i < 9; i++) points[i] = rand();
+        points[0] = 0; points[9] = RAND_MAX;
+        sort(points, points+10);
+        m = unique(points, points+10) - points;
+        double sum = 0;
+        for(int i = 0; i < m-1; i++){
+            double hl = l + (double)points[i]/RAND_MAX * (r-l);
+            double hr = l + (double)points[i+1]/RAND_MAX * (r-l);
+            sum += integrate(hl, hr, squareIntegrate(hl,hr), max(1e-4*eps, 1e-15));
+        }
+        return sum;
     }
 
 public:
-    ForierSolver(const double &eps){
+    FourierSolver(const double &eps){
         maxn = 0;
         do{
             ++maxn;
@@ -58,7 +70,7 @@ public:
 int main(int argc, char* argv[]){
     double t = stod(argv[1]), eps = stod(argv[2]);
     ofstream fout("result.txt");
-    ForierSolver truesol(eps);
+    FourierSolver truesol(eps);
     for(int i = 0; i <= 1000; i++){
         double val = t ? truesol(0.001*i, t) : truesol.initial(0.001*i);
         fout << 0.001*i << " " << val << "\n";
