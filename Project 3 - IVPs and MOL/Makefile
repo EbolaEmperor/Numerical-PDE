@@ -60,4 +60,4 @@ clean:
 	rm *.o
 	rm -r jsoncpp-1.9.5/build
 	cd report && make clean
-	cd report && cd figures && mv 11-1.eps 11-1.epsback && rm *.eps && mv 11-1.epsback 11-1.eps
+	cd report && cd figures && mv 11-1.eps 11-1.epsback && rm *.eps 5-5.png && mv 11-1.epsback 11-1.eps
