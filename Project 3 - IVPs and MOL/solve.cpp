@@ -5,6 +5,7 @@
 #include "StabilityFunc.h"
 #include "StiffSampleFunc.h"
 #include "VanDerPolFunc.h"
+#include "Custom.h"
 #include "json.h"
 using namespace std;
 
@@ -37,7 +38,9 @@ int main(int argc, char* argv[]){
         f = new StabilityFunc();
     } else if(problem["Problem"].asString() == "Stiff Sample Problem"){
         f = new StiffSampleFunc();
-    }else {
+    } else if(problem["Problem"].asString() == "Custom"){
+        f = new CustomFunc();
+    } else {
         cerr << "[Error] No such problem called " << problem["Problem"].asString() << endl;
         exit(-1);
     }
