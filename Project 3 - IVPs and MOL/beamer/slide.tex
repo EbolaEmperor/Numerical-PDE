@@ -138,16 +138,14 @@
   \frametitle{Definition}
   A \textbf{stiff equation} is a differential equation for which certain numerical methods for solving the equation are numerically unstable, unless the step size is taken to be extremely small.\footnote{From Wikipedia.}
 
-  For the linear ODE
-  \begin{equation*}
-    \mathbf{u'}(t)=A\mathbf{u}+\mathbf{b}(t),
-  \end{equation*}
-  the stiffness ratio is
-  \begin{equation*}
-    \frac{\max\limits_{\lambda\in\Lambda(A)}|\text{Re}\;\lambda|}{\min\limits_{\lambda\in\Lambda(A)}|\text{Re}\;\lambda|}.
-  \end{equation*}
+  \vspace{1em}
+  \textbf{Stiff equations} are equations where certain implicit methods, in particular BDF, perform better, usually tremendously better, than explicit ones.\footnote{Form Curtiss and Hirschfelder.}
 
-  The stiff equation always have a large stiff ratio.
+  \vspace{1em}
+  \textbf{Stiff equations} are problems for which explicit methods don't work.\footnote{From Hairer.}
+
+  \vspace{1em}
+  An IVP is said to be \textbf{stiff in an interval} if for some initial condition any numerical method with a bounded RAS is forced to use a time-step size that is unneccesarily and excessively smaller than the time scale of the true solution of the IVP.\footnote{From the textbook.}
 \end{frame}
 
 \begin{frame}
