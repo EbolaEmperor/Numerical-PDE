@@ -151,7 +151,59 @@ where the final step follows from $u_t=-au_x$ and $u_{tt}=-au_{tx}=a^2u_{xx}$. I
 
 \section*{\large Exercise 12.82}
 
-Here are the reproduced plots.
+Suppose $\mu\geq 0$. Rewrite the Beam-Warming method as
+\begin{equation*}
+    \mathbf{U}^{n+1}=A\mathbf{U}^n,
+\end{equation*}
+where
+\begin{equation*}
+    A=\begin{bmatrix}
+        \gamma_1 &          &          &          & \gamma_3 & \gamma_2\\
+        \gamma_2 & \gamma_1 &          &          &          & \gamma_3\\
+        \gamma_3 & \gamma_2 & \gamma_1 & \\
+                 & \ddots   & \ddots   & \ddots\\
+                 &          & \ddots   & \ddots   & \ddots\\
+                 &          &          & \gamma_3 & \gamma_2 & \gamma_1
+    \end{bmatrix},
+\end{equation*}
+and where
+\begin{equation*}
+    \gamma_1=-\frac{3}{2}\mu+\frac{1}{2}\mu^2,\quad \gamma_2=2\mu-\mu^2,\quad \gamma_3=-\frac{1}{2}\mu+\frac{1}{2}\mu^2.
+\end{equation*}
+
+Suppose $h=\frac{1}{m}$, and $\mathbf{w}^1,...,\mathbf{w}^m$ are vectors, where
+\begin{equation*}
+    w_j^p=e^{2\pi\mathbf{i}pjh},\quad p,j=1,...,m.
+\end{equation*}
+
+For each $p=1,...,m$ and $j=3,...,m$, we have
+\begin{align*}
+    &(A\mathbf{w}^p)_j = \gamma_1e^{2\pi\mathbf{i}pjh} + \gamma_2e^{2\pi\mathbf{i}p(j-1)h} + \gamma_3e^{2\pi\mathbf{i}p(j-2)h}\\
+    =& e^{-2\pi\mathbf{i}ph}\left[(\mu^2-2\mu)(\cos(2\pi ph)-1)-\mathbf{i}\mu\sin(2\pi ph)\right]w^p_j.
+\end{align*}
+
+It's easy to verify that the conclusion is also true for $j=1$ and $j=2$, using the fact $mh=1$. Hence $\mathbf{w}^p$ is an eigenvector of $A$, corresponding to the eigenvalue
+\begin{equation*}
+    z_p=e^{-2\pi\mathbf{i}ph}\left[(\mu^2-2\mu)(\cos(2\pi ph)-1)-\mathbf{i}\mu\sin(2\pi ph)\right].
+\end{equation*}
+
+Now suppose $\mu\in[0,2]$, we have
+\begin{align*}
+    &1+z_p \\
+    =& e^{-2\pi\mathbf{i}ph}\left[(\mu^2-2\mu)(\cos(2\pi ph)-1)-\mathbf{i}\mu\sin(2\pi ph)+e^{2\pi\mathbf{i}ph}\right]\\
+    =& e^{-2\pi\mathbf{i}ph}\left[ (\mu-1)^2\cos(2\pi ph) + (2-\mu)\mu + \mathbf{i}(1-\mu)\sin(2\pi ph)\right]\\
+    =& e^{-2\pi\mathbf{i}ph}\left[ \eta^2\cos(2\pi ph) -\eta^2+1 -\mathbf{i}\eta\sin(2\pi ph)\right]
+\end{align*}
+where $\eta=\mu-1$ and hence $\eta\in[-1,1]$. Denote $c=\cos(2\pi ph)$, clearly we have $\sin^2(2\pi ph)=1-c^2$. It follows that
+\begin{align*}
+    |1+z_p|^2 &= \left[\eta^2\cos(2\pi ph)+1-\eta^2\right]^2 + \left[\eta \sin(2\pi ph)\right]^2\\
+    &= \eta^4c^2+2\eta^2(1-\eta^2)c+(1-\eta^2)^2+\eta^2(1-c^2)\\
+    &= \eta^2(\eta^2-1)(c-1)^2+1\\
+    &\leq 1,
+\end{align*}
+where the final step is because $\eta^2-1\leq 0$.
+
+Hence the Beam-Warming method is stable for $\mu\in[0,2]$. Similar for $\mu\in[-2,0)$. Here are the reproduced plots of $z_p$ for $\mu=0.8,1.6,2,$ and $2.4$.
 
 \begin{figure}[H]
     \centering
