@@ -59,9 +59,9 @@ where
 \begin{equation*}
     A_k=2\int_0^1 \varphi(\xi)\sin(k\pi\xi) \text{d}\xi,
 \end{equation*}
-and $\varphi(x)$ is the initial condition. The coefficients $A_k$ could be computed by the adaptive Simpson integration method. For a given tolerance $\varepsilon$, compute the series (1) to $N$ items such that $|A_N|<\varepsilon$ and $|A_{N-1}|<\varepsilon$. We can compute $N$ and $A_1,...,A_N$ by a pre-procedure. And this induced a solver. See \verb|src/trueSol.cpp|.
+and $\varphi(x)$ is the initial condition. The coefficients $A_k$ could be computed by the adaptive Simpson integration method. For a given tolerance $\varepsilon$, compute the series (1) to $N$ terms such that $|A_N|<\varepsilon$ and $|A_{N-1}|<\varepsilon$. We can compute $N$ and $A_1,...,A_N$ by a pre-procedure. And this induced a solver. See \verb|src/trueSol.cpp|.
 
-Compute the true solution by the solver above with $\varepsilon=10^{-3}$ at $t=0.0025,t=0.005$ and $t=0.025$. The series (1) is computed to $37$ items. The results are given as follows.
+Compute the true solution by the solver above with $\varepsilon=10^{-3}$ at $t=0.0025,t=0.005$ and $t=0.025$. The series (1) is computed to $37$ terms. The results are given as follows.
 
 \vspace{-.3em}\begin{figure}[H]
     \centering
