@@ -153,11 +153,11 @@ where the final step follows from $u_t=-au_x$ and $u_{tt}=-au_{tx}=a^2u_{xx}$. I
 
 Suppose $\mu\geq 0$. Rewrite the Beam-Warming method as
 \begin{equation*}
-    \mathbf{U}^{n+1}=A\mathbf{U}^n,
+    \frac{\mathbf{U}^{n+1}-\mathbf{U}^n}{k}=A\mathbf{U}^n,
 \end{equation*}
 where
 \begin{equation*}
-    A=\begin{bmatrix}
+    A=\frac{1}{k}\begin{bmatrix}
         \gamma_1 &          &          &          & \gamma_3 & \gamma_2\\
         \gamma_2 & \gamma_1 &          &          &          & \gamma_3\\
         \gamma_3 & \gamma_2 & \gamma_1 & \\
@@ -178,16 +178,16 @@ Suppose $h=\frac{1}{m}$, and $\mathbf{w}^1,...,\mathbf{w}^m$ are vectors, where
 
 For each $p=1,...,m$ and $j=3,...,m$, we have
 \begin{align*}
-    &(A\mathbf{w}^p)_j = \gamma_1e^{2\pi\mathbf{i}pjh} + \gamma_2e^{2\pi\mathbf{i}p(j-1)h} + \gamma_3e^{2\pi\mathbf{i}p(j-2)h}\\
-    =& e^{-2\pi\mathbf{i}ph}\left[(\mu^2-2\mu)(\cos(2\pi ph)-1)-\mathbf{i}\mu\sin(2\pi ph)\right]w^p_j.
+    &(A\mathbf{w}^p)_j = \frac{1}{k}\left(\gamma_1e^{2\pi\mathbf{i}pjh} + \gamma_2e^{2\pi\mathbf{i}p(j-1)h} + \gamma_3e^{2\pi\mathbf{i}p(j-2)h}\right)\\
+    =& \frac{e^{-2\pi\mathbf{i}ph}}{k}\left[(\mu^2-2\mu)(\cos(2\pi ph)-1)-\mathbf{i}\mu\sin(2\pi ph)\right]w^p_j.
 \end{align*}
 
 It's easy to verify that the conclusion is also true for $j=1$ and $j=2$, using the fact $mh=1$. Hence $\mathbf{w}^p$ is an eigenvector of $A$, corresponding to the eigenvalue
 \begin{equation*}
-    z_p=e^{-2\pi\mathbf{i}ph}\left[(\mu^2-2\mu)(\cos(2\pi ph)-1)-\mathbf{i}\mu\sin(2\pi ph)\right].
+    \lambda_p=\frac{e^{-2\pi\mathbf{i}ph}}{k}\left[(\mu^2-2\mu)(\cos(2\pi ph)-1)-\mathbf{i}\mu\sin(2\pi ph)\right].
 \end{equation*}
 
-Now suppose $\mu\in[0,2]$, we have
+Now suppose $\mu\in[0,2]$, since $z_p=k\lambda_p$, we have
 \begin{align*}
     &1+z_p \\
     =& e^{-2\pi\mathbf{i}ph}\left[(\mu^2-2\mu)(\cos(2\pi ph)-1)-\mathbf{i}\mu\sin(2\pi ph)+e^{2\pi\mathbf{i}ph}\right]\\
@@ -443,7 +443,7 @@ C_p(\xi) &= a+\frac{ah^2}{6}(\mu-1)(\mu-2)\xi^2\\
 C_g(\xi) &= a+\frac{ah^2}{2}(\mu-1)(\mu-2)\xi^2
 \end{align*}
 
-For $\mu\in(0,1)$, both $C_p$ and $C_g$ have a magnitude grater than $|a|$, hence numerical oscillations move ahead of the true wave crest. This answers Question (f) of Example 12.92.
+For $\mu\in(0,1)$, both $C_p$ and $C_g$ have a magnitude grater than $|a|$, hence numerical oscillations move ahead of the true wave crest. This answers Question (e) of Example 12.92.
 
 \section*{\large Exercise 12.99}
 
@@ -496,7 +496,7 @@ Therefore
     |g(\xi)|^2&= \cos^2(\xi h) + \mu^2 \sin^2(\xi h)\\
     &= 1+(\mu^2-1)\sin^2(\xi h),
 \end{align*}
-and hence the method is stable provided $\mu\leq 1$.
+and hence the method is stable provided $|\mu|\leq 1$.
 
 \section*{\large Exercise 12.102}
 
@@ -516,6 +516,6 @@ Therefore
     |g(\xi)|^2&= \left(1-2\mu^2\sin^2\frac{\xi h}{2}\right)^2 + \mu^2 \sin^2(\xi h)\\
     &= 1+4\mu^2(\mu^2-1)\sin^4\frac{\xi h}{2},
 \end{align*}
-and hence the method is stable provided $\mu\leq 1$.
+and hence the method is stable provided $|\mu|\leq 1$.
 
 \end{document}
