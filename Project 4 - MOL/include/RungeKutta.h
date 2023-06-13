@@ -83,6 +83,17 @@ public:
 };
 static void registerAdaptiveESDIRK(void)__attribute__((constructor));
 
+class EmbeddedESDIRKSolver : public AdaptiveRKSolver{
+protected:
+    Matrix A;
+    ColVector b1, b2, c;
+    std::pair<ColVector, ColVector> oneStepSolve(TimeFunction &f, const ColVector &U0, const double &t0, const double &step);
+public:
+    EmbeddedESDIRKSolver(const int &p);
+};
+static void registerEmbeddedESDIRK(void)__attribute__((constructor));
+
+
 
 class EmbeddedRKSolver : public AdaptiveRKSolver{
 protected:

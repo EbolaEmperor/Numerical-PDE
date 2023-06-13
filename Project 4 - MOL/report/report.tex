@@ -269,7 +269,7 @@ For FTCS method to be absolutely stable, the time-step size is limited to $k\leq
 
 BTCS and the $2$-stages Radau-IIA method are both L-stable. There's no oscillations in the results given by them.
 
-Furthermore, we fix $h=\frac{1}{100}$, the adaptive ESDIRK method with $E=10^{-4}$ gives results at $t=0.0025,t=0.005$ and $t=0.025$ as follows.
+\textbf{Adaptive Method Test}. We fix $h=\frac{1}{100}$, the embedded ESDIRK 4(3) method with $E=10^{-4}$ gives results at $t=0.0025,t=0.005$ and $t=0.025$ as follows.
 
 \vspace{-.3em}\begin{figure}[H]
     \centering
@@ -287,9 +287,9 @@ Furthermore, we fix $h=\frac{1}{100}$, the adaptive ESDIRK method with $E=10^{-4
     \end{minipage}
 \end{figure} \vspace{-.5em}
 
-It only used 18 time steps and solved in 0.02s. The results are visually indistinguishable from the exact solution.
+It only used 13 time steps and solved in 0.006s. The results are visually indistinguishable from the exact solution.
 
-Now we show that the semi-discrete heat equation is really stiff. We fix $h=\frac{1}{500}$, and set $E=10^{-8}$. To give the result at $t=0.5$, the adaptive ESDIRK method used 160 time steps and solved in 7.6s. However, the Dormand-Prince 5(4) method used 150606 time steps and solved in 34.4s.
+\textbf{Stiffness Test}. We fix $h=\frac{1}{500}$, and set $E=10^{-8}$. To give the result at $t=0.5$, the embedded ESDIRK 4(3) method used 108 time steps and solved in 1.83s. However, the Dormand-Prince 5(4) method used 150606 time steps and solved in 34.4s.
 
 \section{\large MOL for the advection equation}
 

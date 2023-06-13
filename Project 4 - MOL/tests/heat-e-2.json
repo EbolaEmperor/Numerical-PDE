@@ -1,5 +1,6 @@
 {
-    "Method": "Adaptive ESDIRK",
+    "Method": "Embedded ESDIRK",
+    "Order": 4,
     "Space Section": 500,
     "End Time": 0.5,
     "Max Step": 0.01,
