@@ -220,6 +220,7 @@ rootSolver::rootSolver(const Operator & restriction, const Operator & prolongati
     cycle = 0;
     pure_Neumann = false;
     irregular = false;
+    nineStencil = false;
 }
 
 void rootSolver::setCycle(const std::string &cy){
@@ -308,6 +309,10 @@ void rootSolver::solve(){
 
 void rootSolver::setIrregular(const bool &rhs){
     irregular = rhs;
+}
+
+void rootSolver::useNineStencil(){
+    nineStencil = true;
 }
 
 //--------------------------------Solver 1D--------------------------------
@@ -571,6 +576,7 @@ ColVector specialSolveLowNeumann_RDcorner(const int &n){
 Solver2D::Solver2D(const Operator & restriction, const Operator & prolongation)
     : rootSolver(restriction, prolongation){
     dim = 2;
+    nineStencil = false;
 }
 
 void Solver2D::init(const int &_n, const Function &f, const Function &g, const std::string &bon, const BType &_bonDetail){
@@ -585,6 +591,8 @@ void Solver2D::init(const int &_n, const Function &f, const Function &g, const s
             if(irregular){
                 specialPoint p(n,i,j);
                 b(IDX(n,i,j)) = f(p.x, p.y);
+            } else if(nineStencil){
+                b(IDX(n,i,j)) = f(i*h, j*h) + h*h/12.0 * f.delta(i*h, j*h);
             } else {
                 b(IDX(n,i,j)) = f(i*h, j*h);
             }
@@ -622,11 +630,23 @@ SparseMatrix Solver2D::getAh(const int &n) const{
                 ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i-1,j-1), coef(7)));
                 ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i-1,j+1), coef(8)));
             } else {
-                ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i,j), 4.0/(h*h)));
-                ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i-1,j), -1.0/(h*h)));
-                ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i+1,j), -1.0/(h*h)));
-                ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i,j-1), -1.0/(h*h)));
-                ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i,j+1), -1.0/(h*h)));
+                if(nineStencil){
+                    ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i,j), 10.0/(3.0*h*h)));
+                    ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i-1,j), -2.0/(3.0*h*h)));
+                    ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i+1,j), -2.0/(3.0*h*h)));
+                    ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i,j-1), -2.0/(3.0*h*h)));
+                    ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i,j+1), -2.0/(3.0*h*h)));
+                    ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i-1,j-1), -1.0/(6.0*h*h)));
+                    ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i+1,j-1), -1.0/(6.0*h*h)));
+                    ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i-1,j+1), -1.0/(6.0*h*h)));
+                    ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i+1,j+1), -1.0/(6.0*h*h)));
+                } else {
+                    ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i,j), 4.0/(h*h)));
+                    ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i-1,j), -1.0/(h*h)));
+                    ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i+1,j), -1.0/(h*h)));
+                    ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i,j-1), -1.0/(h*h)));
+                    ele.emplace_back(Triple(IDX(n,i,j), IDX(n,i,j+1), -1.0/(h*h)));
+                }
             }
         }
     for(int i = 0; i <= n; i++){

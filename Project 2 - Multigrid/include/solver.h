@@ -45,6 +45,7 @@ class Function{
 public:
     virtual double operator () (const double &x) const = 0;
     virtual double operator () (const double &x, const double &y) const = 0;
+    virtual double delta(const double &x, const double &y) const{return 0;}
 };
 
 class Function1D : public Function{
@@ -90,6 +91,7 @@ protected:
     bool pure_Neumann;
     double neumannC;
     bool irregular;
+    bool nineStencil;
 
     virtual SparseMatrix getAh(const int &n) const = 0;
     void initAh();
@@ -104,6 +106,7 @@ public:
     void setMaxiter(const int &N);
     void setCycle(const std::string &cy);
     void setIrregular(const bool &rhs);
+    void useNineStencil();
     void solve();
     bool isPureNeumann() const;
     virtual void output(std::ostream& fout) const = 0;

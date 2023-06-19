@@ -42,20 +42,30 @@ public:
 
 class Fun2D : public Function2D{
 private:
-    Expression e;
+    Expression e, Delta_e;
 public:
-    Fun2D(){
+    Fun2D(){}
+    void setExpr(const std::string &expr){
         e.addVariable("x");
         e.addVariable("y");
-    }
-    void setExpr(const std::string &expr){
         e.setExpr(expr);
+    }
+    void setDeltaExpr(const std::string &expr){
+        Delta_e.addVariable("x");
+        Delta_e.addVariable("y");
+        Delta_e.setExpr(expr);
     }
     double operator () (const double &x, const double &y) const{
         vector<double> parm;
         parm.push_back(x);
         parm.push_back(y);
         return e(parm);
+    }
+    double delta(const double &x, const double &y) const{
+        vector<double> parm;
+        parm.push_back(x);
+        parm.push_back(y);
+        return Delta_e(parm);
     }
 };
 
@@ -334,6 +344,9 @@ void BVP::solve(){
 
     if(dim == 2){
         f.setExpr(problem["f"].asString());
+        if(problem["9-stencil"].isBool()){
+            f.setDeltaExpr(problem["Delta f"].asString());
+        }
         if( !problem["g"].isObject() ){
             g1.setExpr(problem["g"].asString());
             g = &g1;
@@ -392,6 +405,9 @@ void BVP::solve(){
     else
         solver = new Solver1D(*restri, *prolong);
     
+    if(problem["9-stencil"].isBool()){
+        solver -> useNineStencil();
+    }
     if(problem["Reigeon Type"].asString() == "Irregular")
         solver -> setIrregular(true);
     
