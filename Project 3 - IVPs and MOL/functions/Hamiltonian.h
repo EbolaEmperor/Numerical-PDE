@@ -1,6 +1,7 @@
 #include "IVP.h"
+#include "functionFactory.h"
 
-class CustomFunc : public TimeFunction{
+class HamiltonianFunc : public TimeFunction{
 public:
     ColVector operator () (const ColVector &x, const double &t) const{
         ColVector res(4);
@@ -12,3 +13,10 @@ public:
         return res;
     }
 };
+
+static void registerHamiltonian(void)__attribute__((constructor));
+
+void registerHamiltonian(){
+    auto& factory = FunctionFactory::Instance();
+    factory.registerFunction("Hamiltonian", [](double arg){ return (TimeFunction*) new HamiltonianFunc(); });
+}

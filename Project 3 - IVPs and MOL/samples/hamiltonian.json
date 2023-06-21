@@ -1,5 +1,5 @@
 {
-    "Problem": "Custom",
+    "Problem": "Hamiltonian",
     "Method": "Dormand-Prince 8(7)",
     "Init": [0, 2, 0.4, 0],
     "T": 996,

@@ -1,4 +1,5 @@
 #include "IVP.h"
+#include "functionFactory.h"
 
 class VanDerPolFunc : public TimeFunction{
 public:
@@ -9,3 +10,10 @@ public:
         return res;
     }
 };
+
+static void registerVanDerPol(void)__attribute__((constructor));
+
+void registerVanDerPol(){
+    auto& factory = FunctionFactory::Instance();
+    factory.registerFunction("Van der Pol Problem", [](double arg){ return (TimeFunction*) new VanDerPolFunc(); });
+}

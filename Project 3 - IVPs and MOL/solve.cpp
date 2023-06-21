@@ -1,11 +1,13 @@
 #include <bits/stdc++.h>
 #include "IVP.h"
+#include "functionFactory.h"
 #include "RestrictedThreeBodyFunc.h"
 #include "ThreeBodyFunc.h"
 #include "StabilityFunc.h"
 #include "StiffSampleFunc.h"
 #include "VanDerPolFunc.h"
-#include "Custom.h"
+#include "Hamiltonian.h"
+#include "AliContest.h"
 #include "json.h"
 using namespace std;
 
@@ -27,23 +29,8 @@ int main(int argc, char* argv[]){
         exit(-1);
     }
 
-    TimeFunction *f;
-    if(problem["Problem"].asString() == "Restricted 3-Body Problem"){
-        f = new RestrictedThreeBodyFunc(problem["Mass Ratio"].asDouble());
-    } else if(problem["Problem"].asString() == "3-Body Problem"){
-        f = new ThreeBodyFunc();
-    } else if(problem["Problem"].asString() == "Van der Pol Problem"){
-        f = new VanDerPolFunc();
-    } else if(problem["Problem"].asString() == "Stability Problem"){
-        f = new StabilityFunc();
-    } else if(problem["Problem"].asString() == "Stiff Sample Problem"){
-        f = new StiffSampleFunc();
-    } else if(problem["Problem"].asString() == "Custom"){
-        f = new CustomFunc();
-    } else {
-        cerr << "[Error] No such problem called " << problem["Problem"].asString() << endl;
-        exit(-1);
-    }
+    auto & funcFac = FunctionFactory::Instance();
+    TimeFunction *f = funcFac.createFunction(problem["Problem"].asString(), problem["Mass Ratio"].asDouble());
 
     const int m = problem["Init"].size();
     ColVector x0(m);

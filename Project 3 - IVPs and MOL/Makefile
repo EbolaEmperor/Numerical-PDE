@@ -11,8 +11,8 @@ story: solve
 run: solve
 	./solve tests/*.json
 
-solve: $(JSONLIB) solve.o IVP.o LMMs.o RungeKutta.o matrix.o NonLinearSolver.o Polynomial.o
-	g++ solve.o IVP.o LMMs.o RungeKutta.o matrix.o NonLinearSolver.o Polynomial.o $(LIB) -o solve $(OPTIMIZE)
+solve: $(JSONLIB) solve.o IVP.o LMMs.o RungeKutta.o matrix.o NonLinearSolver.o Polynomial.o functionFactory.o
+	g++ solve.o IVP.o LMMs.o RungeKutta.o matrix.o NonLinearSolver.o Polynomial.o functionFactory.o $(LIB) -o solve $(OPTIMIZE)
 
 heat: $(JSONLIB) MOL/heat.o IVP.o LMMs.o RungeKutta.o matrix.o NonLinearSolver.o Polynomial.o
 	g++ MOL/heat.o IVP.o LMMs.o RungeKutta.o matrix.o NonLinearSolver.o Polynomial.o $(LIB) -o MOL/heat $(OPTIMIZE)
@@ -33,6 +33,9 @@ MOL/advection.o: MOL/advection.cpp
 
 solve.o: solve.cpp functions/*.h
 	g++ -c solve.cpp $(INC) -Ifunctions $(OPTIMIZE)
+
+functionFactory.o: src/functionFactory.cpp include/functionFactory.h
+	g++ -c src/functionFactory.cpp $(INC) $(OPTIMIZE)
 
 matrix.o: src/matrix.cpp include/matrix.h
 	g++ -c src/matrix.cpp $(INC) $(OPTIMIZE)

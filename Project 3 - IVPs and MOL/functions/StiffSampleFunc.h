@@ -1,4 +1,5 @@
 #include "IVP.h"
+#include "functionFactory.h"
 
 class StiffSampleFunc : public TimeFunction{
 private:
@@ -18,3 +19,10 @@ public:
 
 double StiffSampleFunc::lambda = -1e6;
 double StiffSampleFunc::eta = 1.5;
+
+static void registerStiffSample(void)__attribute__((constructor));
+
+void registerStiffSample(){
+    auto& factory = FunctionFactory::Instance();
+    factory.registerFunction("Stiff Sample Problem", [](double arg){ return (TimeFunction*) new StiffSampleFunc(); });
+}

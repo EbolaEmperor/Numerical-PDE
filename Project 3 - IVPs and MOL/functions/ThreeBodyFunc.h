@@ -1,4 +1,5 @@
 #include "IVP.h"
+#include "functionFactory.h"
 
 class ThreeBodyFunc : public TimeFunction{
 public:
@@ -25,3 +26,10 @@ public:
         return res;
     }
 };
+
+static void registerThreeBody(void)__attribute__((constructor));
+
+void registerThreeBody(){
+    auto& factory = FunctionFactory::Instance();
+    factory.registerFunction("3-Body Problem", [](double arg){ return (TimeFunction*) new ThreeBodyFunc(); });
+}

@@ -1,4 +1,5 @@
 #include "IVP.h"
+#include "functionFactory.h"
 
 class RestrictedThreeBodyFunc : public TimeFunction{
 private:
@@ -16,3 +17,10 @@ public:
         return res;
     }
 };
+
+static void registerRestrictedThreeBody(void)__attribute__((constructor));
+
+void registerRestrictedThreeBody(){
+    auto& factory = FunctionFactory::Instance();
+    factory.registerFunction("Restricted 3-Body Problem", [](double arg){ return (TimeFunction*) new RestrictedThreeBodyFunc(arg); });
+}

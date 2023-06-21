@@ -1,4 +1,5 @@
 #include "IVP.h"
+#include "functionFactory.h"
 
 class StabilityFunc : public TimeFunction{
 private:
@@ -17,3 +18,10 @@ public:
 };
 
 double StabilityFunc::lambda = -1e6;
+
+static void registerStability(void)__attribute__((constructor));
+
+void registerStability(){
+    auto& factory = FunctionFactory::Instance();
+    factory.registerFunction("Stability Problem", [](double arg){ return (TimeFunction*) new StabilityFunc(); });
+}
