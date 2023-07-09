@@ -1,0 +1,39 @@
+%
+% Sample SBC book chapter
+%
+% This is a public-domain file.
+%
+% Charset: ISO8859-1 (latin-1) áéíóúç
+%
+\documentclass{SBCbookchapter}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil,english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{cite}
+\usepackage{enumerate}
+
+\newcounter{chapter}\setcounter{chapter}{1}
+\author{}
+\title{Model Problem in 2D}
+
+\begin{document}
+\maketitle
+
+In this chapter, we will focus on a model problem in 2D. The technic is similar, hence the implemention is as easy as the case in 1D. However, we will see a significant different from the case in 1D and meet more difficulties in the analysis. Consider the model problem
+\begin{equation*}
+	\left\{
+		\begin{array}{l}
+		-\Delta u(x)=f(x),\;x\in\Omega=(0,1)^2,\\
+		u=0,\;x\in \partial\Omega
+		\end{array}
+	\right.
+\end{equation*}
+
+\vspace{3em}
+
+\bibliographystyle{sbc}
+\bibliography{sbc-template}
+
+\end{document}
