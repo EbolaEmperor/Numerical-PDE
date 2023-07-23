@@ -146,7 +146,7 @@ void irNeumannEquation(Matrix &A, const int &cnt, const double &cosa, const doub
     }
     b(1) = cosa;
     b(2) = sina;
-    ColVector res = solve(coef,b);
+    ColVector res = coef.solveDestructiveness(b);
     for(int i = 0; i < 6; i++)
         A(cnt, pnt[i].getID()) = res(i);
 }
@@ -478,7 +478,7 @@ void Solver::solve(Function2D &f, Function2D &g, const int &_m, std::string bond
     }
 
     // Solve the linear system
-    Uval = A.solve(b);
+    Uval = A.solveDestructiveness(b);
 }
 
 bool Solver::inRange(const double &x, const double &y) const{

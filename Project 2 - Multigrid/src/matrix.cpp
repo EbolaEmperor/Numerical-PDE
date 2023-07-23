@@ -6,19 +6,19 @@ Matrix::Matrix(){
 }
 Matrix::Matrix(const int &_n){
     n = m = _n;
-    a = new double[n*m];
-    memset(a, 0, sizeof(double)*(n*m));
+    a = new double[(size_t)n*m];
+    memset(a, 0, sizeof(double)*((size_t)n*m));
 }
 Matrix::Matrix(const int &_n, const int &_m){
     n = _n;
     m = _m;
-    a = new double[n*m];
-    memset(a, 0, sizeof(double)*(n*m));
+    a = new double[(size_t)n*m];
+    memset(a, 0, sizeof(double)*((size_t)n*m));
 }
 Matrix::Matrix(const Matrix &A){
     n = A.n;
     m = A.m;
-    a = new double[n*m];
+    a = new double[(size_t)n*m];
     for(int i = 0; i < n; i++)
         for(int j = 0; j < m; j++)
             element(i,j) = A(i,j);
@@ -31,8 +31,8 @@ Matrix::Matrix(const double *p, const int &_n){
 }
 Matrix::Matrix(const int &_n, const int &_m, const double *p){
     n = _n; m = _m;
-    a = new double[n*m];
-    for(int i = 0; i < n*m; i++)
+    a = new double[(size_t)n*m];
+    for(size_t i = 0; i < n*m; i++)
         a[i] = p[i];
 }
 Matrix::~Matrix(){
@@ -59,14 +59,14 @@ const double Matrix::element(const int &r, const int &c) const{
         std::cerr << "[Error] Matrix:: out of range" << std::endl;
         exit(-1);
     }
-    return a[r*m+c];
+    return a[(size_t)r*m+c];
 }
 double & Matrix::element(const int &r, const int &c){
     if(r<0 || r>=n || c<0 || c>=m){
         std::cerr << "[Error] Matrix:: out of range" << std::endl;
         exit(-1);
     }
-    return a[r*m+c];
+    return a[(size_t)r*m+c];
 }
 const double Matrix::operator () (const int &r, const int &c) const{
     return element(r, c);
@@ -280,7 +280,7 @@ void Matrix::swaprow(const int &r1, const int &r2){
         exit(-1);
     }
     for(int j = 0; j < m; j++)
-        std::swap(a[r1*m+j], a[r2*m+j]);
+        std::swap(a[(size_t)r1*m+j], a[(size_t)r2*m+j]);
 }
 
 void Matrix::swapcol(const int &r1, const int &r2){
@@ -289,7 +289,7 @@ void Matrix::swapcol(const int &r1, const int &r2){
         exit(-1);
     }
     for(int i = 0; i < n; i++)
-        std::swap(a[i*m+r1], a[i*m+r2]);
+        std::swap(a[(size_t)i*m+r1], a[(size_t)i*m+r2]);
 }
 
 // 向量对应元素相除除，用法：x = dotdiv(a,b)

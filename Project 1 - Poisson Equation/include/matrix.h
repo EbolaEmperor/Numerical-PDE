@@ -46,6 +46,7 @@ public:
 
     void setSubmatrix(const int &r, const int &c, const Matrix &rhs);
     Matrix getSubmatrix(const int &r1, const int &r2, const int &c1, const int &c2) const;
+    Matrix reshape(const int &_n, const int &_m) const;
 
     RowVector getRow(const int &r) const;
     ColVector getCol(const int &c) const;
@@ -54,14 +55,16 @@ public:
     Matrix operator - () const;
     Matrix operator - (const Matrix &B) const;
     Matrix operator * (const Matrix &B) const;
+    Matrix operator / (const double &p) const;
     Matrix T() const;
 
-    double vecnorm(const double &p);
+    double vecnorm(const double &p) const;
     void swaprow(const int &r1, const int &r2);
     void swapcol(const int &r1, const int &r2);
 
     friend Matrix solve(Matrix A, Matrix b);
     ColVector solve(const ColVector &b) const;
+    ColVector solveDestructiveness(const ColVector &b);
     double det() const;
     Matrix inv() const;
     Matrix rref() const;
@@ -110,6 +113,7 @@ RowVector zeroRow(const int &n);
 int sgn(const double &x);
 
 //----------------------Matrix相关函数---------------------------
+Matrix operator * (const double &k, const Matrix &x);
 Matrix abs(const Matrix &A);
 double max(const Matrix &A);
 double sum(const Matrix &A);
@@ -132,8 +136,11 @@ Matrix mergeCol(const Matrix &A, const Matrix &B);
 Matrix mergeRow(const Matrix &A, const Matrix &B);
 Matrix min(const Matrix &A, const Matrix &B);
 Matrix max(const Matrix &A, const Matrix &B);
+double vecnorm(const Matrix &A, const double &p);
+double vecnorm(const Matrix &A);
 
 //----------------------Row/ColVector相关函数----------------------
+RowVector operator * (const double &k, const RowVector &x);
 ColVector operator * (const double &k, const ColVector &x);
 ColVector operator * (const Matrix &A, const ColVector &x);
 RowVector operator * (const RowVector &x, const Matrix &A);

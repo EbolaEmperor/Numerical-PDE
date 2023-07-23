@@ -6,19 +6,19 @@ Matrix::Matrix(){
 }
 Matrix::Matrix(const int &_n){
     n = m = _n;
-    a = new double[n*m];
-    memset(a, 0, sizeof(double)*(n*m));
+    a = new double[(size_t)n*m];
+    memset(a, 0, sizeof(double)*((size_t)n*m));
 }
 Matrix::Matrix(const int &_n, const int &_m){
     n = _n;
     m = _m;
-    a = new double[n*m];
-    memset(a, 0, sizeof(double)*(n*m));
+    a = new double[(size_t)n*m];
+    memset(a, 0, sizeof(double)*((size_t)n*m));
 }
 Matrix::Matrix(const Matrix &A){
     n = A.n;
     m = A.m;
-    a = new double[n*m];
+    a = new double[(size_t)n*m];
     for(int i = 0; i < n; i++)
         for(int j = 0; j < m; j++)
             element(i,j) = A(i,j);
@@ -31,8 +31,8 @@ Matrix::Matrix(const double *p, const int &_n){
 }
 Matrix::Matrix(const int &_n, const int &_m, const double *p){
     n = _n; m = _m;
-    a = new double[n*m];
-    for(int i = 0; i < n*m; i++)
+    a = new double[(size_t)n*m];
+    for(size_t i = 0; i < n*m; i++)
         a[i] = p[i];
 }
 Matrix::~Matrix(){
@@ -55,10 +55,18 @@ Matrix & Matrix::operator = (Matrix && rhs){
 }
 
 const double Matrix::element(const int &r, const int &c) const{
-    return a[r*m+c];
+    if(r<0 || r>=n || c<0 || c>=m){
+        std::cerr << "[Error] Matrix:: out of range" << std::endl;
+        exit(-1);
+    }
+    return a[(size_t)r*m+c];
 }
 double & Matrix::element(const int &r, const int &c){
-    return a[r*m+c];
+    if(r<0 || r>=n || c<0 || c>=m){
+        std::cerr << "[Error] Matrix:: out of range" << std::endl;
+        exit(-1);
+    }
+    return a[(size_t)r*m+c];
 }
 const double Matrix::operator () (const int &r, const int &c) const{
     return element(r, c);
@@ -108,6 +116,17 @@ Matrix Matrix::getSubmatrix(const int &r1, const int &r2, const int &c1, const i
         for(int j = 0; j < c2-c1+1; j++)
             sub(i, j) = element(r1+i, c1+j);
     return sub;
+}
+
+Matrix Matrix::reshape(const int &_n, const int &_m) const{
+    if(_n*_m != n*m){
+        std::cerr << "Matrix Error! Reshape should keep the size!" << std::endl;
+        exit(-1);
+    }
+    Matrix rhs = *this;
+    rhs.n = _n;
+    rhs.m = _m;
+    return rhs;
 }
 
 RowVector Matrix::getRow(const int &r) const{
@@ -164,6 +183,14 @@ Matrix operator * (const double &k, const Matrix &A) {
     return C;
 }
 
+Matrix Matrix::operator / (const double &k) const {
+    Matrix C(n, m);
+    for(int i = 0; i < C.n; i++)
+        for(int j = 0; j < C.m; j++)
+            C(i, j) = element(i, j) / k;
+    return C;
+}
+
 Matrix Matrix::operator * (const Matrix &B) const{
     if(m!=B.n){
         std::cerr << "Matrix Error! Undefined multiplication! (" << n << "*" << m << ") * (" << B.n << "*" << B.m << ")" << std::endl;
@@ -185,11 +212,19 @@ Matrix Matrix::T() const{
     return C;
 }
 
-double Matrix::vecnorm(const double &p){
+double Matrix::vecnorm(const double &p) const{
     double norm = 0;
     for(int i = 0; i < n*m; i++)
         norm += pow(a[i], p);
     return pow(norm, 1.0/p);
+}
+
+double vecnorm(const Matrix &A, const double &p){
+    return A.vecnorm(p);
+}
+
+double vecnorm(const Matrix &A){
+    return A.vecnorm(2);
 }
 
 // 将矩阵中所有元素取绝对值后返回，用法：B=abs(A)
@@ -245,7 +280,7 @@ void Matrix::swaprow(const int &r1, const int &r2){
         exit(-1);
     }
     for(int j = 0; j < m; j++)
-        std::swap(a[r1*m+j], a[r2*m+j]);
+        std::swap(a[(size_t)r1*m+j], a[(size_t)r2*m+j]);
 }
 
 void Matrix::swapcol(const int &r1, const int &r2){
@@ -254,7 +289,7 @@ void Matrix::swapcol(const int &r1, const int &r2){
         exit(-1);
     }
     for(int i = 0; i < n; i++)
-        std::swap(a[i*m+r1], a[i*m+r2]);
+        std::swap(a[(size_t)i*m+r1], a[(size_t)i*m+r2]);
 }
 
 // 向量对应元素相除除，用法：x = dotdiv(a,b)
@@ -291,7 +326,7 @@ Matrix solveUpperTriangular(const Matrix &A, const Matrix &b){
 }
 
 // 解方程Ax=b，算法为列主元法Gauss消元，用法：x = solve(A,b)
-Matrix solve(Matrix A, Matrix b){
+Matrix solveDestructiveness(Matrix &A, Matrix b){
     if(A.n<A.m || A.n!=b.n || A.m==0){
         std::cerr << "Matrix Error! The method solve() cannot solve an ill-posed equation!" << std::endl;
         return Matrix();
@@ -329,6 +364,13 @@ Matrix solve(Matrix A, Matrix b){
     }
     delete [] columns;
     return x;
+}
+Matrix solve(Matrix A, const Matrix &b){
+    return solveDestructiveness(A,b);
+}
+
+ColVector Matrix::solveDestructiveness(const ColVector & b){
+    return ::solveDestructiveness(*this, b);
 }
 ColVector Matrix::solve(const ColVector & b) const{
     return ::solve(*this, b);
@@ -686,13 +728,6 @@ ColVector ColVector::operator - () const{
     return res;
 }
 
-ColVector operator * (const double &k, const ColVector &x){
-    ColVector res(x.n);
-    for(int i = 0; i < res.n; i++)
-        res(i) = k * x(i);
-    return res;
-}
-
 ColVector operator * (const Matrix &A, const ColVector &x){
     if(A.m!=x.n){
         std::cerr << "ColVector Multiplication Error!" << std::endl;
@@ -702,6 +737,14 @@ ColVector operator * (const Matrix &A, const ColVector &x){
     for(int i = 0; i < res.n; i++)
         for(int j = 0; j < A.m; j++)
             res(i) += A(i, j) * x(j);
+    return res;
+}
+
+
+ColVector operator * (const double &k, const ColVector &x){
+    ColVector res(x.n);
+    for(int i = 0; i < res.n; i++)
+        res(i) = k * x(i);
     return res;
 }
 
@@ -736,13 +779,6 @@ double & RowVector::operator () (const int &x){
 
 int RowVector::size() const{
     return m;
-}
-
-RowVector operator * (const double &k, const RowVector &x){
-    RowVector res(x.n);
-    for(int i = 0; i < res.n; i++)
-        res(i) = k * x(i);
-    return res;
 }
 
 RowVector operator * (const RowVector &x, const Matrix &A){
@@ -791,6 +827,13 @@ RowVector RowVector::operator - () const{
     RowVector res(m);
     for(int i = 0; i < m; i++)
         res(i) = -(*this)(i);
+    return res;
+}
+
+RowVector operator * (const double &k, const RowVector &x){
+    RowVector res(x.m);
+    for(int i = 0; i < res.m; i++)
+        res(i) = k * x(i);
     return res;
 }
 
