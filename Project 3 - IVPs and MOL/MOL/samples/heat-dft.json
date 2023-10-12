@@ -1,7 +1,6 @@
 {
-    "Method": "Fourier",
-    "Fourier Terms": 512,
-    "Space Section": 512,
+    "Method": "DFT",
+    "Space Section": 1024,
     "End Time": 0.1,
     "Output": true,
     "Dense-Discrete Output": true,

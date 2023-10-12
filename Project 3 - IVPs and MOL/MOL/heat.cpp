@@ -2,6 +2,7 @@
 #include "IVP.h"
 #include "json.h"
 using namespace std;
+typedef complex<double> Complex;
 
 const double PI = acos(-1);
 
@@ -56,7 +57,7 @@ double g0(const double &x){
     else return 0;
 }
 
-// Fourier Solver不支持非零边值条件
+// Fourier Solver 使用分离变量后的Fourier级数展开，是解析方法，但是只支持齐次边值条件
 class FourierSolver{
 private:
     int maxn;
@@ -136,15 +137,112 @@ public:
         cout << "--------------------------------------------------------------------------------" << endl;
         ofstream fout(fname);
         fout << setprecision(12);
-        for(double x = 0; x <= 1+1e-14; x += h){
+        for(double x = h/2; x <= 1; x += h){
             fout << initial(x) << " ";
         }
         fout << endl;
         for(double t = step; t <= T+1e-14; t += step){
-            fout << t << " ";
-            for(double x = h; x <= 1-h+1e-14; x += h){
-                fout << (*this)(x, T) << " ";
+            for(double x = h/2; x <= 1; x += h){
+                fout << (*this)(x, t) << " ";
             }
+            fout << endl;
+        }
+        fout.close();
+        cout << "Dense-Discrete Output: Results has been saved to " << fname << endl;
+    }
+};
+
+// DFT Solver 使用FFT将问题转化为频域上若干个独立的线性ODE，只支持周期边界条件，且空间划分数必须为2的幂次
+class DFTSolver{
+private:
+    int m;
+    vector<Complex> initFcoef;
+
+    vector<Complex> fft(const vector<Complex> &in_a, const int &v) const{
+        const int n = in_a.size();
+        static const double pi = acos(-1);
+        int l = 0, *r = new int[n];
+        memset(r, 0, sizeof(int) * n);
+        for(int i = 1; i < n; i <<= 1) l++;
+        for(int i = 0; i < n; i++)
+            r[i] = ( r[i/2] / 2 ) | ( (i&1) << (l-1) );
+        vector<Complex> a = in_a;
+        for(int i = 0; i < n; i++)
+            if(i < r[i]) swap(a[i], a[r[i]]);
+        for(int i = 1; i < n; i <<= 1){
+            Complex wn(cos(pi/i), v*sin(pi/i));
+            int p = i << 1;
+            for(int j = 0; j < n; j += p)
+            {
+                Complex w(1, 0);
+                for(int k = 0; k < i; k++)
+                {
+                    Complex x = a[j+k], y = w*a[i+j+k];
+                    a[j+k] = x + y;
+                    a[i+j+k] = x - y;
+                    w = w * wn;
+                }
+            }
+        }
+        if(v==-1) for(auto& z : a) z/=n;
+        return a;
+    }
+
+    double initial(const double &x) const{
+        return g0(x);
+    }
+
+public:
+    DFTSolver(const int &N){
+        cout << "--------------------------------------------------------------------------------" << endl;
+        cout << "Solving diffusion equation with DFT solver (with periodic boundary)..." << endl;
+        m = N;
+        double h = 1.0/m;
+        for(int i = 0; i < m; i++){
+            initFcoef.push_back(initial(h/2 + i*h));
+        }
+        initFcoef = fft(initFcoef, 1);
+    }
+
+    RowVector operator () (const double &t) const{
+        double sum = 0;
+        auto tmpCoef = initFcoef;
+        for(int k = 0; k < m; k++){
+            //cout << tmpCoef[k] << " ";
+            int n = (k+m/2)%m - m/2;
+            tmpCoef[k] *= exp(-4*PI*PI*n*n*t);
+            //cout << tmpCoef[k] << endl;
+        }
+        tmpCoef = fft(tmpCoef, -1);
+        RowVector res(m);
+        for(int i = 0; i < m; i++){
+            res(i) = tmpCoef[i].real();
+        }
+        return res;
+    }
+
+    void output(const string &fname, const double &T, const double &h){
+        cout << "--------------------------------------------------------------------------------" << endl;
+        ofstream fout(fname);
+        auto res = (*this)(T);
+        for(int i = 0; i < res.size(); i++)
+            fout << res(i) << " ";
+        fout.close();
+        cout << "Output: Results has been saved to " << fname << endl;
+    }
+
+    void denseDiscreteOutput(const string &fname, const double &step, const double &T, const double &h){
+        cout << "--------------------------------------------------------------------------------" << endl;
+        ofstream fout(fname);
+        fout << setprecision(12);
+        for(double x = h/2; x <= 1; x += h){
+            fout << initial(x) << " ";
+        }
+        fout << endl;
+        for(double t = step; t <= T+1e-14; t += step){
+            auto res = (*this)(t);
+            for(int i = 0; i < res.size(); i++)
+                fout << res(i) << " ";
             fout << endl;
         }
         fout.close();
@@ -176,6 +274,15 @@ int main(int argc, char* argv[]){
 
     if(problem["Method"].asString() == "Fourier"){
         FourierSolver solver(problem["Fourier Terms"].asInt());
+        if(problem["Output"].asBool())
+            solver.output("result.txt", T, h);
+        if(problem["Dense-Discrete Output"].asBool())
+            solver.denseDiscreteOutput("result-dense.txt", problem["Dense-Discrete Output Step"].asDouble(), T, h);
+        return 0;
+    }
+
+    if(problem["Method"].asString() == "DFT"){
+        DFTSolver solver(problem["Space Section"].asInt());
         if(problem["Output"].asBool())
             solver.output("result.txt", T, h);
         if(problem["Dense-Discrete Output"].asBool())
