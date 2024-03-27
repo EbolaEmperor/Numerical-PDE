@@ -1,0 +1,17 @@
+{
+    "Condition Type": "mixed",
+    "Reigeon Type": "Ireegular",
+    "Grid Size": 128,
+    "Center": [0.7, 0.7],
+    "Radius": 0.1,
+    "f": "-400*(x^2-x+0.01*y^2-0.01*y+0.3075)*exp(10*(x-0.5)^2+(y-0.5)^2)",
+    "g": {
+        "x=0": ["exp(10*(x-0.5)^2+(y-0.5)^2)-1", "Dirichlet"],
+        "x=1": ["exp(10*(x-0.5)^2+(y-0.5)^2)-1", "Dirichlet"],
+        "y=0": ["-2*(y-0.5)*exp(10*(x-0.5)^2+(y-0.5)^2)", "Neumann"],
+        "y=1": ["2*(y-0.5)*exp(10*(x-0.5)^2+(y-0.5)^2)", "Neumann"],
+        "D": ["exp(10*(x-0.5)^2+(y-0.5)^2)-1", "Dirichlet"]
+    },
+    "Error Check": true,
+    "u": "exp(10*(x-0.5)^2+(y-0.5)^2)-1"
+}

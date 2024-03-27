@@ -1,0 +1,17 @@
+{
+    "Condition Type": "mixed",
+    "Reigeon Type": "Irregular",
+    "Grid Size": 128,
+    "Center": [0.5,0.5],
+    "Radius": 0.25,
+    "f": "(8*(162*x^2+396*x*y+162*y^2-11))/(22*x^2+36*x*y+22*y^2+1)^2",
+    "g": {
+        "x=0": ["log(10*(x+y)^2+(x-y)^2+0.5)", "Dirichlet"],
+        "x=1": ["log(10*(x+y)^2+(x-y)^2+0.5)", "Dirichlet"],
+        "y=0": ["-(18*x+22*y)/(10*(x+y)^2+(x-y)^2+0.5)", "Neumann"],
+        "y=1": ["(18*x+22*y)/(10*(x+y)^2+(x-y)^2+0.5)", "Neumann"],
+        "D": ["(22*x+18*y)/(10*(x+y)^2+(x-y)^2+0.5)*(x-cx)/R+(18*x+22*y)/(10*(x+y)^2+(x-y)^2+0.5)*(y-cy)/R", "Neumann"]
+    },
+    "Error Check": true,
+    "u": "log(10*(x+y)^2+(x-y)^2+0.5)"
+}

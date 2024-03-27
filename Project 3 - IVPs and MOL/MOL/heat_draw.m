@@ -1,0 +1,13 @@
+A = load("result-dense.txt");
+n = size(A,1);
+m = size(A,2);
+t = 0.5/m:1/m:1;
+plot(t, A(2,:), '-');
+ylim([-0.001, 0.5]);
+saveas(gcf, 'heat-e-1-1.eps');
+plot(t, A(3,:), '-');
+ylim([-0.001, 0.5]);
+saveas(gcf, 'heat-e-1-2.eps');
+plot(t, A(11,:), '-');
+ylim([-0.001, 0.5]);
+saveas(gcf, 'heat-e-1-3.eps');

@@ -1,0 +1,323 @@
+%
+% Sample SBC book chapter
+%
+% This is a public-domain file.
+%
+% Charset: ISO8859-1 (latin-1) áéíóúç
+%
+\documentclass{SBCbookchapter}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil,english]{babel}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{cite}
+\usepackage{enumerate}
+
+\newcounter{chapter}\setcounter{chapter}{1}
+\author{}
+\title{Model Problem in 1D}
+
+\begin{document}
+\maketitle
+
+This chapter will focus on a model problem to give a quick insight of the multigrid technic. When I'm learning the multigrid with the note \cite{zqhNA}, a lot of problems arised. The first is how to prove $\rho(TG)\approx 0.1$ and how does it work in the lemma 9.51. I will explain it in this chapter. Many appreciations to the book \cite{BriggsMultigrid}, which make me understand the multigrid technic well.
+
+To start out discussion, we may firstly consider such a model problem.
+\begin{equation}
+	\left\{
+		\begin{array}{l}
+		-u''(x)=f(x),\;x\in(0,1),\\
+		u(0)=u(1)=0.
+		\end{array}
+	\right.
+\end{equation}
+The central discretization on the grid $\Omega^h=\{0,h,2h,...,nh=1\}$ yileds a linear system
+\begin{equation}
+	A^h\mathbf{u}^h=\mathbf{f}^h,
+\end{equation}
+where
+\begin{equation}
+	A^h=\frac{1}{h^2}\begin{bmatrix}
+		2 & -1\\
+		-1 & 2 & -1\\
+		   & \ddots & \ddots & \ddots \\
+		   &        & -1 & 2 & -1\\
+		   &        &    & -1 & 2
+	\end{bmatrix}, 
+	\quad \text{and} \quad
+	\mathbf{f}^h=\begin{bmatrix}
+		f(h)\\
+		f(2h)\\
+		\vdots\\
+		f((n-2)h)\\
+		f((n-1)h)
+	\end{bmatrix}.
+\end{equation}
+We can verify the error in the $\infty$-norm
+\begin{equation}
+	||\mathbf{u}^h-u||_\infty=\max_{i}|u_i^h-u(ih)|=O(h^2),
+\end{equation}
+or in the $2$-norm
+\begin{equation}
+	||\mathbf{u}^h-u||_2=\left(\frac{1}{n-1}\sum_{i=1}^{n-1}|u_i^h-u(ih)|^2\right)^{\frac{1}{2}}=O(h^2).
+\end{equation}
+The proof can be found in \cite{LeVequeFDM}. We call it the \textit{discretization error}.
+
+\section{Basic methods for solving linear systems}
+
+\par To solve the linear system, the most frequently used method is the LU-decomposition, which is konwn to have a complexity $O(n^3)$. Note the matrix $A^h$ is tridiagonal, the LU-decomposition without pivoting could be finished in $O(n)$. To ruduce the discretization error, $h$ should be small enough. However the condition number of $A^h$ is $O(h^{-2})$, which is significant as $h$ goes to $0$. And hence the LU-decomposition without pivoting gives a dramatic result. We illustrate a simple acceleration technic of the LU-decomposition for sparse matrices in the appendix, which has the complexity $O(m^2)$.
+
+Dispite of the LU-decomposition, there's a lot iterative methods disigned for solving linear systems. The most known might be the Jacobi method and the Gauss-Seidel method. More iterative methods could be found in \cite{YousefIter}. Now we introduce the weighted Jacobi method. It produce the result by the iterative scheme
+\begin{equation}
+	\mathbf{u}^h\gets T_\omega \mathbf{u}^h+\omega D^{-1} \mathbf{f}^h,
+\end{equation}
+where
+\begin{equation}
+	T_\omega=I-\omega D^{-1}A^h
+\end{equation}
+and $D$ is a diagonal matrix with the diagonal entries of $A^h$ in its diagonal line. See $\omega=0$ yileds the Jacobi method and $\omega=1$ yields the Gauss-Seidel method. What we care about is how fast the method converges, which is determined by $\rho(T_\omega)$.
+
+\section{A spectrum analysis of $T_\omega$}
+
+We could veryfy the vectors $\mathbf{w}_1,...,\mathbf{w}_{n-1}$ is the eigenvectors of $A$, where
+\begin{equation}
+	w_{k,j}=\sin\frac{jk\pi}{n},\quad j,k=1,...,n-1,
+\end{equation}
+corresponding to the eigenvalues
+\begin{equation}
+	\lambda_k=1-2\omega\sin^2\frac{k\pi}{2n},\quad k=1,...,n-1.
+\end{equation}
+The maximal eigenvalue is $\lambda_\text{max}=\lambda_1\approx 1$ independently of $\omega$. Consequently, $\rho(T_\omega)\approx 1$ and hence slow convergence. A recommended choice of $\omega$ is $\frac{2}{3}$ and the advantage will see in the section 1.6.
+
+\section{Coarse grid, restriction and prolongation}
+
+The original idea of the multigrid is to solve the problem on a coarse grid. Then construct a reasonable initial guess of the solution on the fine grid with the result on the coarse grid. Finally apply some weighted Jacobi iterative steps to smooth the solution. The problems are how to define the coarse grid and how to say the connection between results on the coarse grid and the fine grid.
+
+Here we always assume $n$ is a positive integer power of $2$. And the coarse grid is defined to be
+\begin{equation}
+	\Omega^{2h}=\{0,2h,4h,...,1\},
+\end{equation}
+which has $\frac{n}{2}+1$ grid points. To connect the results between two grid, define the restriction operator $I_h^{2h}:\Omega^h\to \Omega^{2h}$ by
+\begin{equation}
+	I_h^{2h}=\frac{1}{4}\begin{bmatrix}
+		1 & 2 & 1\\
+		  &   & 1 & 2 & 1 \\
+		  &   &   &   & \ddots & \ddots & \ddots\\
+		  &   &   &   &        &        & 1 & 2 & 1
+	\end{bmatrix}.
+\end{equation}
+We call it the \textit{full-weighting} operator. It maps $(\cdots,a,\cdots)^T\in\Omega^h$ to $(\cdots,\frac{a}{4},\frac{a}{2},\frac{a}{4},\cdots)^T\in\Omega^{2h}$. Conversely, we have the prolongation operator $I_{2h}^h:\Omega^{2h}\to \Omega^h$ defined by
+\begin{equation}
+	I_{2h}^{h}=\frac{1}{2}\begin{bmatrix}
+		1\\
+		2\\
+		1 & 1\\
+		  & 2\\
+		  & 1\\
+		  &  & \ddots\\
+		  &  & \ddots\\
+		  &  & \ddots\\
+		  &  &        & 1\\
+		  &  &        & 2\\
+		  &  &        & 1
+	\end{bmatrix}.
+\end{equation}
+We always call it the \textit{linear interpolation} operator since it maps $(\cdots,0,a,b,0,\cdots)^T\in\Omega^{2h}$ to $(\cdots,0,\frac{a}{2},a,\frac{a+b}{2},b,\frac{b}{2},0,\cdots)^T\in\Omega^{h}$.
+
+In the end of the section, we should illustrate the \textit{conjugating principle}
+\begin{equation}
+	I_{2h}^h=c\left(I_h^{2h}\right)^T,\quad \text{here}\; c=2,
+\end{equation}
+and the \textit{Garlerkin condition}
+\begin{equation}
+	I_h^{2h}A^hI_{2h}^h=A^{2h}.
+\end{equation}
+The proof is leaving to the reader.
+
+\section{Two-grid approch}
+
+As a feature of the weighted Jacobi iteration, the high-frequence waves damps quickly while low-frequence waves not. However, low-frequence waves in the fine grid will be higher-frequence waves in the coarse grid and hence we can reduce it in the coarse grid. With this idea, we can construct our first multigrid approch.
+
+\begin{enumerate}[(TG-1)]
+	\setlength{\itemsep}{-0.5ex}%条目间距
+	\item Set $\mathbf{v}^h$ to be an initial guess, usually $\mathbf{v}^h\gets \mathbf{0}$.
+	\item Iterative by $\mathbf{v}^h\gets T_\omega \mathbf{v}^h+\omega D^{-1} \mathbf{f}^h$ for $\nu_1$ times.
+	\item Compute the residure $\mathbf{r}^h\gets A\mathbf{v}^h-\mathbf{f}^h$.
+	\item Use restriction operator to get $\mathbf{r}^{2h}\gets I_h^{2h}\mathbf{r}^h$.
+	\item Solve $A^{2h}\mathbf{e}^{2h}=\mathbf{r}^{2h}$ to get $\mathbf{e}^{2h}$.
+	\item Use prolongation operator to get $\mathbf{e}^h\gets I_{2h}^h \mathbf{e}^{2h}$.
+	\item Correct $\mathbf{v}^h$ by $\mathbf{v}^h\gets \mathbf{v}^h+\mathbf{e}^h$.
+	\item Iterative by $\mathbf{v}^h\gets T_\omega \mathbf{v}^h+\omega D^{-1} \mathbf{f}^h$ for $\nu_2$ times.
+\end{enumerate}
+
+We call the step (TG-2) as \textit{pre-smoothing} and step (TG-8) as \textit{post-smoothing}. The main idea is to solve the residure equation in the coarse grid, and interpolate the result back to the fine grid.
+
+\section{A specturm analysis of the two-grid operator}
+
+Let's denote the $\mathbf{v}^h$ to be the solution of the multigrid approch, and $\mathbf{u}^h$ to be the exact solutoin of the linear system (2). Remember $\mathbf{u}^h$ is not the exact solution of the model problem (1). There's a gap between $\mathbf{u}^h$ and $\mathbf{v}^h$, namely
+\begin{equation}
+	\mathbf{e}^h=\mathbf{v}^h-\mathbf{u}^h.
+\end{equation}
+We call the error as the \textit{algebraic error}. As we can see, after acting the two-grid approch on $\mathbf{u}^h$, the algebraic error is updated by
+\begin{equation}
+	\mathbf{e}^h\gets T_\omega^{\nu_2}\left(I-I_{2h}^h\left(A^{2h}\right)^{-1}I_h^{2h}A^h\right)T_\omega^{\nu_1}\mathbf{e}^h.
+\end{equation}
+Hence we define the operator
+\begin{equation}
+	G=I-I_{2h}^h\left(A^{2h}\right)^{-1}I_h^{2h}A^h.
+\end{equation}
+What we care about is the spectral radius of $G$. We want $\rho(G)$ to be samll, at least not too close to $1$, to ensure the two-grid approch can quickly converge.
+
+Consider the invariant subspaces of $G$. Recall $\mathbf{w}_k\;(k=1,...,n-1)$ in (8) and we write $k'=n-k$. We call the vector pair $\mathbf{w}_k$ and $\mathbf{w}_{k'}$ to be the \textit{complementary modes} for each $k\in[1,\frac{n}{2})$. One can verify that
+\begin{equation}
+	G\begin{bmatrix}
+		\mathbf{w}_k\\
+		\mathbf{w}_{k'}
+	\end{bmatrix}=
+	\begin{bmatrix}
+		\lambda_k^{\nu_1+\nu_2}s_k & \lambda_k^{\nu_1}\lambda_{k'}^{\nu_2}s_k\\
+		\lambda_{k'}^{\nu_1}\lambda_{k}^{\nu_2}c_k & \lambda_k^{\nu_1+\nu_2}c_k
+	\end{bmatrix}
+	\begin{bmatrix}
+		\mathbf{w}_k\\
+		\mathbf{w}_{k'}
+	\end{bmatrix}:=
+	\begin{bmatrix}
+		p_1 & p_2\\
+		p_3 & p_4
+	\end{bmatrix}
+	\begin{bmatrix}
+		\mathbf{w}_k\\
+		\mathbf{w}_{k'}
+	\end{bmatrix}:=P_k
+	\begin{bmatrix}
+		\mathbf{w}_k\\
+		\mathbf{w}_{k'}
+	\end{bmatrix},
+\end{equation}
+where
+\begin{equation}
+	s_k=\sin^2\frac{k\pi}{2n},\quad \text{and} \quad c_k=\cos^2\frac{k\pi}{2n}
+\end{equation}
+by the following steps.
+\begin{enumerate}[STEP 1.]
+	\item Verify $w_{k',j}^h=(-1)^{j+1}w_{k,j}^h$.
+	\item Verify $I_h^{2h}\textbf{w}_k^h=c_k\mathbf{w}_k^{2h}$ and $I_h^{2h}\textbf{w}_{k'}^h=-s_k\mathbf{w}_k^{2h}$.
+	\item Verify $I_{2h}^h \mathbf{w}_k^{2h}=c_k\mathbf{w}_k^h-s_k\mathbf{w}_{k'}^h$.
+	\item Verify the result (18).
+\end{enumerate}
+Further, one can verify $\text{det}(P)=p_1p_4-p_2p_3=0$ and hence $\lambda(P)=\{0,p_1+p_4\}$. If we choose $\nu_1=\nu_2=1$ and $\omega=\frac{2}{3}$, a little computation shows $p_1+p_4=\frac{1}{9}$ is a constant. Finally we have
+\begin{equation}
+	\rho(G)=\max_k \rho(P_k)=\frac{1}{9}.
+\end{equation}
+The value could be smaller if we choose larger $\nu_1$ and $\nu_2$.
+
+\section{V-cycle and FMG-cycle}
+
+In the two-grid approch, we need to solve a linear system of size $\frac{n}{2}-1$ with LU-decomposition, which is expensive if $n$ is large. We want to reduce the grid size recursively, and solve the system directly when the grid size is small enough. This idea induce the V-cycle. To represent the V-cycle recursively, we name the following approch as $VC(h,\mathbf{v}^h,\mathbf{f}^h)$.
+
+\begin{enumerate}[(VC-1)]
+	\setlength{\itemsep}{-0.5ex}%条目间距
+	\item If $n=\frac{1}{h}\leq N_0$, solve $A^h\mathbf{v}^h=\mathbf{f}^h$ directly and return $\mathbf{v}^h$.
+	\item Iterative by $\mathbf{v}^h\gets T_\omega \mathbf{v}^h+\omega D^{-1} \mathbf{f}^h$ for $\nu_1$ times.
+	\item Compute the residure $\mathbf{r}^h\gets A\mathbf{v}^h-\mathbf{f}^h$.
+	\item Use restriction operator to get $\mathbf{r}^{2h}\gets I_h^{2h}\mathbf{r}^h$.
+	\item Get $\mathbf{e}^{2h}$ recursively by $\mathbf{e}^{2h}\gets VC\left(2h,\mathbf{0},\mathbf{r}^{2h}\right)$.
+	\item Use prolongation operator to get $\mathbf{e}^h\gets I_{2h}^h \mathbf{e}^{2h}$.
+	\item Correct $\mathbf{v}^h$ by $\mathbf{v}^h\gets \mathbf{v}^h+\mathbf{e}^h$.
+	\item Iterative by $\mathbf{v}^h\gets T_\omega \mathbf{v}^h+\omega D^{-1} \mathbf{f}^h$ for $\nu_2$ times.
+	\item return $\mathbf{v}^h$.
+\end{enumerate}
+
+In practice, we usually choose $\nu_1$ and $\nu_2$ no more than $3$. And hence acting V-cycle once need only $O(n)$ time. How many times of V-cycle should we act to reduce the algebraic error to a fixed tolerance? We don't know, but in practice, the number should be almost $O(\log n)$. We need a cheaper way to make full use of the coarse grids. Then the FMG-cycle is proposed. Similarly, we name the following approch as $FMG(h,\mathbf{f}^h)$.
+
+\begin{enumerate}[(FMG-1)]
+	\setlength{\itemsep}{-0.5ex}%条目间距
+	\item If $n=\frac{1}{h}\leq N_0$, solve $A^h\mathbf{v}^h=\mathbf{f}^h$ directly and return $\mathbf{v}^h$.
+	\item Get $\mathbf{v}^{2h}$ recursively by $\mathbf{e}^{2h}\gets FMG\left(2h,I_{h}^{2h}\mathbf{f}^{h}\right)$.
+	\item Set the initial guess $\mathbf{v}^h\gets I_{2h}^h \mathbf{v}^{2h}$.
+	\item Update the solution with a V-cycle to get $\mathbf{v}^h\gets VC(h,\mathbf{v}^h,\mathbf{f}^h)$.
+	\item return $\mathbf{v}^h$.
+\end{enumerate}
+
+One can verify that acting FMG-cycle once only takes $O(n)$ time. And in the final of the chapter, we will show that acting FMG-cycle once is enough to reduce the algebraic error to the order of the discretization error.
+
+\section{Energy norm}
+
+To analysis the error of an FMG-cycle, a suitable norm is necessary. Both the $\infty$-norm and the $2$-norm are hard to analysis. Instead, we choose the energy norm.
+
+\textbf{Definition 1.1.} Let $A$ be a symmetric positive definite matrix, the \textit{energy norm of $A$} is defined as
+\begin{equation}
+	||\mathbf{u}||_A=\sqrt{\mathbf{u}^TA\mathbf{u}}.
+\end{equation}
+
+\section{An analysis on the complexity of FMG}
+
+The goal of this section is to show that acting FMG-cycle once is enough to reduce the algebraic to $O(h^2)$, as the same order of the discretization error. Firstly, a little computation shows
+\begin{equation}
+	\sqrt{2}||\mathbf{v}^{2h}-\mathbf{u}^{2h}||_{A^{2h}}=||I_{2h}^h\mathbf{v}^{2h}-I_{2h}^h\mathbf{u}^{2h}||_{A^h}.
+\end{equation}
+We should firstly suppose the interpolation operator is of order at least $2$, namely
+\begin{equation}
+	||I_{2h}^h\mathbf{u}^{2h}-\mathbf{u}^h||_{A^h}\leq Kh^2.
+\end{equation}
+Now if we have
+\begin{equation}
+	||\mathbf{e}^{2h}||_{A^{2h}}\leq K(2h)^2
+\end{equation}
+in the coarse grid. Then the initial error on $\Omega^h$ have
+\begin{align}
+	||\mathbf{e}_0^h||_{A^h}&=||I_{2h}^h\mathbf{v}^{2h}-\mathbf{u}^{2h}||_{A^h}\nonumber\\
+	&\leq ||I_{2h}^h\mathbf{v}^{2h}-I_{2h}^h\mathbf{u}^{2h}||_{A^h}+||I_{2h}^h\mathbf{u}^{2h}-\mathbf{u}^{2h}||_{A^h}\nonumber\\
+	&= \sqrt{2}||\mathbf{v}^{2h}-\mathbf{u}^{2h}||_{A^{2h}} + ||I_{2h}^h\mathbf{u}^{2h}-\mathbf{u}^{2h}||_{A^h}\nonumber\\
+	&\leq \sqrt{2}K(2h)^2+Kh^2=(1+4\sqrt{2})Kh^2<7Kh^2.
+\end{align}
+As we can see in section 1.5, set $\nu_1=\nu_2=1$ and $\omega=\frac{2}{3}$, then the eigenvalues of $G$ are $0$ and $\frac{1}{9}$ with the corresponding eigenspaces satisfy $V_1\oplus V_2=\mathbb{R}^{n-1}$. Hence we can write
+\begin{equation}
+	\mathbf{e}_0^h=k_1\mathbf{r}_1+k_2\mathbf{r}_2,\quad \text{where}\;\mathbf{r}_1\in V_1,\mathbf{r}_2\in V_2.
+\end{equation}
+Consequently,
+\begin{equation}
+	G\mathbf{e}_0^h=\frac{1}{9}k_2\mathbf{r}_2.
+\end{equation}
+Hence we derive that
+\begin{equation}
+	||\mathbf{e}^h||_{A^h}=||G\mathbf{e}_0^h||_{A^h}=\frac{1}{9}||k_2\mathbf{r}_2||_{A^h}\leq \frac{1}{9}||\mathbf{e}_0^h||_{A^h}\leq Kh^2.
+\end{equation}
+In fact, we have proved the following theorem by induction.
+
+\textbf{Theorem 1.1.} If The interpolation operator is of order at least $2$. Then the algebraic error of FMG-cycle satisfies
+\begin{equation}
+	||\mathbf{e}^h||_{A^h}\leq Kh^2.
+\end{equation}
+for some fixed constant $K>0$, which is determined by the interpolation operator.
+
+\section{Other prolongation operators}
+
+Usually, the order of the prolongation or restriction operator should be not less than the order of the discretization error. In the model problem, the linear interpolation and the full-weighting operator is enough. However, when higher order discretization is applied, the higher order operators should be used, such as the \textit{quadratic interpolation} formula defined by
+\begin{equation}
+	v_{2j+1}^h = \frac{3}{8}v_{j}^{2h} + \frac{3}{4}v_{j+1}^{2h} - \frac{1}{8}v_{j+2}^{2h}
+\end{equation}
+or
+\begin{equation}
+	v_{2j-1}^h = \frac{3}{8}v_{j+1}^{2h} + \frac{3}{4}v_{j-1}^{2h} - \frac{1}{8}v_{j-2}^{2h}.
+\end{equation}
+In the interior grid point, both formula can be applied. However in the left most grid point, only (30) can be applied, and (31) for the right most. If we combine the two formulas, we got the \textit{cubic interpolation} formula
+\begin{equation}
+	v_{2j+1}^h = \frac{9}{16}\left(v_{j}^{2h}+v_{j+1}^{2h}\right) - \frac{1}{16}\left(v_{j-1}^{2h}+v_{j+2}^{2h}\right).
+\end{equation}
+And it cannot be applied in the left most or the righ most grid point.
+
+\section{The difficulties of the multigrid analysis}
+
+In some situations, the multigrid analysis is more than difficult. For example, the cubic interpolation operator always performs well in practice. But no existing analysis tells us why it converges and why it works well. To show the reason, we should recall the conjugating principle (13) and the Garlerkin condition (14). If one of them does not hold, the theoretical analysis will run into difficulties.
+
+The other difficulty is computing the eigenvalues of $A^h$. In most problems, it has no analytic results. You will find the difficulties more clear after reading the chapter 2.
+
+\vspace{3em}
+
+\bibliographystyle{sbc}
+\bibliography{sbc-template}
+
+\end{document}

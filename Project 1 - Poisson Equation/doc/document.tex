@@ -1,0 +1,122 @@
+%!TEX program = xelatex
+% 完整编译: xelatex -> biber/bibtex -> xelatex -> xelatex
+\documentclass[lang=cn,11pt,a4paper]{elegantpaper}
+
+\title{设计手册与测试说明}
+\author{Wenchong Huang}
+\date{\zhtoday}
+
+
+% 本文档命令
+\usepackage{array, float}
+\newcommand{\ccr}[1]{\makecell{{\color{#1}\rule{1cm}{1cm}}}}
+
+\begin{document}
+
+\maketitle
+
+注意：本项目在\verb|Ubuntu 22.04.1 LTS|经过全部测试，若您的系统版本为\verb|Windows|或更低版本的\verb|Ubuntu|导致无法编译或运行此项目，请与作者联系。
+
+\section{测试说明}
+
+本程序依赖 \verb|jsoncpp| 库，如果您没有安装，请先安装它：
+\begin{lstlisting}
+  sudo apt install libjsoncpp-dev
+\end{lstlisting}
+
+请直接在项目根目录下运行：
+\begin{lstlisting}
+    make run
+\end{lstlisting}
+
+编译与测试将会自动完成。第一次编译所需时间较长，因为需要编译jsoncpp，总编译时长大约3分钟。测试所需时长大约为180秒。
+
+测试完成后，运行：
+\begin{lstlisting}
+    make clean
+\end{lstlisting}
+
+生成的所有编译结果会全部清除。如果您只想清除求解器，而不想清除jsoncpp，请运行：
+\begin{lstlisting}
+    make clear
+\end{lstlisting}
+
+\section{用户手册}
+
+您需要将方程按下列格式描述，并保存为json文件。下面是样例1：
+
+\begin{lstlisting}
+  {
+    "Condition Type": "Neumann",
+    "Reigeon Type": "Irregular",
+    "Grid Size": 16,
+    "Center": [0.5, 0.5],
+    "Radius": 0.2,
+    "f": "-(1-sin(x)+cos(x)*cos(x))*exp(sin(x)+y)",
+    "g": {
+        "x=0": "-exp(y)",
+        "x=1": "cos(1)*exp(sin(1)+y)",
+        "y=0": "-exp(sin(x))",
+        "y=1": "exp(sin(x)+1)",
+        "D": "cos(x)*exp(sin(x)+y)*(x-cx)/R+exp(sin(x)+y)*(y-cy)/R"
+    },
+    "Error Check": true,
+    "u": "exp(sin(x)+y)"
+}
+\end{lstlisting}
+
+下面是样例2:
+\begin{lstlisting}
+  {
+    "Condition Type": "Dirichlet",
+    "Reigeon Type": "Regular",
+    "Grid Size": 128,
+    "f": "-(1-sin(x)+cos(x)*cos(x))*exp(sin(x)+y)",
+    "g": "exp(sin(x)+y)",
+    "Error Check": true,
+    "u": "exp(sin(x)+y)"
+  }
+\end{lstlisting}
+
+下面是样例3:
+\begin{lstlisting}
+  {
+    "Condition Type": "mixed",
+    "Reigeon Type": "Irregular",
+    "Grid Size": 16,
+    "Center": [0.45, 0.45],
+    "Radius": 0.15,
+    "f": "-(1-sin(x)+cos(x)*cos(x))*exp(sin(x)+y)",
+    "g": {
+        "x=0": ["exp(y)", "Dirichlet"],
+        "x=1": ["exp(sin(1)+y)", "Dirichlet"],
+        "y=0": ["-exp(sin(x))", "Neumann"],
+        "y=1": ["exp(sin(x)+1)", "Neumann"],
+        "D": ["cos(x)*exp(sin(x)+y)*(x-cx)/R+exp(sin(x)+y)*(y-cy)/R", "Neumann"]
+    },
+    "Error Check": true,
+    "u": "exp(sin(x)+y)"
+ }
+\end{lstlisting}
+
+各参数说明如下：
+
+\begin{enumerate}[(1)]
+\item \verb|Condition Type|是条件的类型，您可以输入\verb|Dirichlet|，\verb|Neumann|或\verb|mixed|；
+\item \verb|Reigeon Type|是区域的类型，您可以输入\verb|Regular|或\verb|Irregular|；
+\item \verb|Grid Size|是网格的大小，您可以输入一个整数；
+\item \verb|Center|与\verb|Radius|用于描述不规则区域的形状；
+\item \verb|f|用于描述$-\Delta u$；
+\item \verb|g|用于描述边值条件，请按不同边界列出，按样例1所示。如果您在每个边界上的条件可以使用同一个表达式表示，请参考样例2的写法。特别地，如果您的条件类型是\verb|mixed|，您必须按照样例3的写法列出边界条件。
+\item \verb|Check Error|：若您需要验证误差，请设为\verb|true|，否则设为\verb|false|；
+\item \verb|u|：真实解。如果您需要验证误差，您必须提供真实解的表达式。
+\end{enumerate}
+
+使用
+\begin{lstlisting}
+    ./solve 文件名
+\end{lstlisting}
+
+来求解您的方程。
+
+\end{document}

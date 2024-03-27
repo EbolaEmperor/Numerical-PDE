@@ -1,0 +1,8 @@
+{
+    "Method": "DFT",
+    "Space Section": 1024,
+    "End Time": 0.1,
+    "Output": true,
+    "Dense-Discrete Output": true,
+    "Dense-Discrete Output Step": 0.01
+}

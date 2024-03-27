@@ -1,0 +1,11 @@
+{
+    "Condition Type": "Dirichlet",
+    "Reigeon Type": "Irregular",
+    "Grid Size": 16,
+    "Center": [0.4, 0.4],
+    "Radius": 0.2,
+    "f": "-(1-sin(x)+cos(x)*cos(x))*exp(sin(x)+y)",
+    "g": "exp(sin(x)+y)",
+    "Error Check": true,
+    "u": "exp(sin(x)+y)"
+}

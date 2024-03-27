@@ -1,0 +1,15 @@
+{
+    "Problem": "Restricted 3-Body Problem",
+    "Method": "Adaptive Radau-IIA",
+    "Order": 5,
+    "Mass Ratio": 0.012277471,
+    "Init": [0.7, 0, 0, 0, -0.403526, 0],
+    "T": 12.582604742222023,
+    "Periodic": 1,
+    "eps": 1e-8,
+    "Richardson Error Estimate": false,
+    "Output": true,
+    "Dense Output": false,
+    "Dense-Discrete Output": true,
+    "Dense-Discrete Output Step": 0.002
+}

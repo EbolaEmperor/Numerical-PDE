@@ -1,0 +1,15 @@
+{
+   "Dense Output" : false,
+   "Dense-Discrete Output" : true,
+   "Init" : [ 0.87977922777799999, 0, 0, 0, -0.37967778094900001, 0 ],
+   "Mass Ratio" : 0.012277471,
+   "Max Step" : 20,
+   "Method" : "Dormand-Prince",
+   "Output" : true,
+   "Periodic" : 1,
+   "Problem" : "Restricted 3-Body Problem",
+   "Richardson Error Estimate" : false,
+   "T" : 19.140540691377002,
+   "eps" : 5.0000000000000004e-06
+}
+

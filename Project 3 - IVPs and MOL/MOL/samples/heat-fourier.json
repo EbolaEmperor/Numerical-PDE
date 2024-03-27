@@ -1,0 +1,9 @@
+{
+    "Method": "Fourier",
+    "Fourier Terms": 512,
+    "Space Section": 512,
+    "End Time": 0.1,
+    "Output": true,
+    "Dense-Discrete Output": true,
+    "Dense-Discrete Output Step": 0.01
+}

@@ -1,0 +1,14 @@
+{
+   "Dense Output" : false,
+   "Dense-Discrete Output" : false,
+   "Grid Size" : 2000,
+   "Init" : [ 0.87977922777799999, 0, 0, 0, -0.37967778094900001, 0 ],
+   "Mass Ratio" : 0.012277471,
+   "Method" : "ESDIRK",
+   "Output" : false,
+   "Periodic" : 1,
+   "Problem" : "Restricted 3-Body Problem",
+   "Richardson Error Estimate" : true,
+   "T" : 19.140540691377002
+}
+

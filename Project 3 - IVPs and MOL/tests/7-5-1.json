@@ -1,0 +1,14 @@
+{
+   "Dense Output" : false,
+   "Dense-Discrete Output" : false,
+   "Init" : [ 2, 0 ],
+   "Max Step" : 100,
+   "Method" : "Adaptive Gauss-Legendre",
+   "Order" : 2,
+   "Output" : true,
+   "Problem" : "Van der Pol Problem",
+   "Richardson Error Estimate" : false,
+   "T" : 3000,
+   "eps" : 0.0001
+}
+

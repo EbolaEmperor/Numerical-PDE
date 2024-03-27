@@ -1,0 +1,20 @@
+{
+   "Condition Type" : "mixed",
+   "Cycle Type" : "FMG",
+   "Dimension" : 2,
+   "Error Check" : true,
+   "Grid Size" : 16,
+   "Max Iter" : 10,
+   "Prolongation" : "linear",
+   "Reigeon Type" : "Irregular",
+   "Restriction" : "injection",
+   "eps" : 1e-08,
+   "f" : "-(1-sin(x)+cos(x)*cos(x))*exp(sin(x)+y)",
+   "g" : {
+      "Down Bondary" : [ "cos(x)*exp(sin(x)+y)*(pi/16*cos(pi*x))/sqrt(pi*pi/256*(cos(pi*x))^2+1)+exp(sin(x)+y)*(-1)/sqrt(pi*pi/256*(cos(pi*x))^2+1)", "Neumann" ],
+      "x=0" : [ "exp(sin(x)+y)", "Dirichlet" ],
+      "x=1" : [ "exp(sin(x)+y)", "Dirichlet" ],
+      "y=1" : [ "exp(sin(x)+y)", "Neumann" ]
+   },
+   "u" : "exp(sin(x)+y)"
+}

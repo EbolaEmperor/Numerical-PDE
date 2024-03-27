@@ -1,0 +1,362 @@
+% $Date: 2022/12/30 17:24:03 $
+% This template file is public domain.
+%
+% TUGboat class documentation is at:
+%   http://mirrors.ctan.org/macros/latex/contrib/tugboat/ltubguid.pdf
+% or
+%   texdoc tugboat
+
+\documentclass[twocolumn,10pt]{article}
+\setlength{\columnsep}{.3in}
+\setlength{\columnseprule}{.5pt}
+\pagestyle{empty}
+
+\usepackage{amsmath}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{array, float}
+\usepackage{caption}
+\usepackage{enumerate}
+\usepackage[hidelinks,pdfa]{hyperref}
+\usepackage[a4paper, total={7in, 9.2in}, vcentering]{geometry}
+
+\usepackage{fancyhdr} % 导入fancyhdr包
+\pagestyle{fancy}
+% 页眉设置
+\fancyhead[C]{Report for Chapter 12}
+\fancyhead[R]{May 24, 2023}
+\fancyhead[L]{Wenchong Huang}
+\fancyfoot[C]{\thepage} % 页码
+
+%%% Start of metadata %%%
+
+% repeat info for each author; comment out items that don't apply.
+%\ORCID{0}
+% To receive a physical copy of the TUGboat issue, please include the
+% mailing address we should use, as a comment if you prefer it not be printed.
+
+%%% End of metadata %%%
+
+\begin{document}
+
+\section{\large MOL for the heat equation}
+
+\;\;\;\;Firstly we plot the initial condition as follows.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.4\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-0-0.eps}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+We can construct a solver based on Fourier analysis. Note that the true solution is
+\begin{equation}
+    u(t,x)=\sum_{k=1}^\infty A_k e^{-k^2\pi^2t}\sin(k\pi t),
+\end{equation}
+where
+\begin{equation*}
+    A_k=2\int_0^1 \varphi(\xi)\sin(k\pi\xi) \text{d}\xi,
+\end{equation*}
+and $\varphi(x)$ is the initial condition. The coefficients $A_k$ could be computed by the adaptive Simpson integration method. For a given tolerance $\varepsilon$, compute the series (1) to $N$ terms such that $|A_N|<\varepsilon$ and $|A_{N-1}|<\varepsilon$. We can compute $N$ and $A_1,...,A_N$ by a pre-procedure. And this induced a solver. See \verb|src/trueSol.cpp|.
+
+Compute the true solution by the solver above with $\varepsilon=10^{-3}$ at $t=0.0025,t=0.005$ and $t=0.025$. The series (1) is computed to $37$ terms. The results are given as follows.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-0-1.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-0-2.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-0-3.eps}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+We can use any existing IVP solver to solve the semi-discrete heat equation. Remind that in the IVP solver, the implicit method should solve a nonlinear equation with a number of iterations at each step. However, the semi-discrete heat equation is linear, so we can solve it just by the LU-decomposition.
+
+The AMG technique has been tried. However, the performance is unstable. Sometimes it gets 10 times acceleration, while sometimes it does not converge. In fact, the coefficient matrix is not always an M-matrix. Finally we still choose the LU-decomposition to solve the linear equations.
+
+Now we reproduce the results in Example 12.38. Fix $h=\frac{1}{20}$. The following plots represent the solution by the Crank-Nicolson method with $r=1$ at $t=k, t=2k$ and $t=10k$, respectively.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-1-1.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-1-2.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-1-3.eps}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+Crank-Nikolson with $r=2$ gives results as follows.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-2-1.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-2-2.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-2-3.eps}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+BTCS with $r=1$ gives results as follows.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-3-1.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-3-2.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-3-3.eps}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+The collocation method in Example 11.258 (the $2$-stages Radau-IIA method) with $r=1$ gives results as follows.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-4-1.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-4-2.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-a-4-3.eps}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+BTCS with $r=\frac{1}{2h}$ gives results as follows.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-b-1-1.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-b-1-2.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-b-1-3.eps}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+The collocation method in Example 11.258 (the $2$-stages Radau-IIA method) with $r=\frac{1}{2h}$ gives results as follows.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-b-2-1.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-b-2-2.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-b-2-3.eps}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+FTCS with $r=\frac{1}{2}$ gives results as follows.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-c-1-1.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-c-1-2.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-c-1-3.eps}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+FTCS with $r=1$ gives results as follows.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-c-2-1.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-c-2-2.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-c-2-3.eps}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+The $1$-stage Gauss-Legendre method with $r=1$ gives results as follows.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-d-1-1.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-d-1-2.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-d-1-3.eps}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+The $1$-stage Gauss-Legendre method with $r=\frac{1}{2h}$ gives results as follows.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-d-2-1.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-d-2-2.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-d-2-3.eps}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+The $1$-stage Gauss-Legendre gives the same result as Crank-Nikolson.  In fact, the Crank-Nikolson method is the trapezoidal rule and the $1$-stage Gauss-Legendre is the midpoint rule. They are equivelant in the semi-discrete heat equation, which is homogeneous linear equation. And only if $r\leq 1$ does it satisfies the condition for the discrete maximum principle. The oscillations in the results of them are probably due to the fact that they are not L-stable.
+
+For FTCS method to be absolutely stable, the time-step size is limited to $k\leq \frac{h^2}{2}$. Hence for $r=1$ and $r=\frac{1}{2h}$, the results given by FTCS have strong oscillations.
+
+BTCS and the $2$-stages Radau-IIA method are both L-stable. There's no oscillations in the results given by them.
+
+\textbf{Adaptive Method Test}. We fix $h=\frac{1}{100}$, the embedded ESDIRK 4(3) method with $E=10^{-4}$ gives results at $t=0.0025,t=0.005$ and $t=0.025$ as follows.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-e-1-1.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-e-1-2.eps}
+    \end{minipage}
+    \begin{minipage}[t]{0.32\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/heat-e-1-3.eps}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+It only used 13 time steps and solved in 0.006s. The results are visually indistinguishable from the exact solution.
+
+\textbf{Stiffness Test}. We fix $h=\frac{1}{500}$, and set $E=10^{-8}$. To give the result at $t=0.5$, the embedded ESDIRK 4(3) method used 108 time steps and solved in 1.83s. However, the Dormand-Prince 5(4) method used 150606 time steps and solved in 34.4s.
+
+\section{\large MOL for the advection equation}
+
+\;\;\;\;We solve this problem in Example 12.92 with $h=0.05$ to $T=17$ using the leapfrog method, the Lax-Friedrichs method, the Lax-Wendroff method, the upwind method, and the Beam-Warming method. The final results with $k=0.8h$ are shown below.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/advection-0.eps}
+        \vspace{-.8em}
+        \caption*{initial condition}
+    \end{minipage}
+    \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/advection-1.eps}
+        \vspace{-.8em}
+        \caption*{leapfrog}
+    \end{minipage}
+    \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \vspace{1em}
+        \includegraphics[width=0.95\linewidth]{figures/advection-2.eps}
+        \vspace{-.8em}
+        \caption*{Lax-Friedrichs}
+    \end{minipage}
+    \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \vspace{1em}
+        \includegraphics[width=0.95\linewidth]{figures/advection-3.eps}
+        \vspace{-.8em}
+        \caption*{Lax-Wendroff}
+    \end{minipage}
+    \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \vspace{1em}
+        \includegraphics[width=0.95\linewidth]{figures/advection-4.eps}
+        \vspace{-.8em}
+        \caption*{upwind}
+    \end{minipage}
+    \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \vspace{1em}
+        \includegraphics[width=0.95\linewidth]{figures/advection-5.eps}
+        \vspace{-.8em}
+        \caption*{Beam-Warming}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+If we keep all parameters the same except the change $k=h$, we have the following results.
+
+\vspace{-.3em}\begin{figure}[H]
+    \centering
+    \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/advection-6.eps}
+        \vspace{-.8em}
+        \caption*{Lax-Wendroff}
+    \end{minipage}
+    \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=0.95\linewidth]{figures/advection-7.eps}
+        \vspace{-.8em}
+        \caption*{leapfrog}
+    \end{minipage}
+\end{figure} \vspace{-.5em}
+
+We generated GIFs for each method to show how the oscillations occur. See at \url{https://www.wenchong-huang.com/2023/05/26/advection/}.
+
+\end{document}

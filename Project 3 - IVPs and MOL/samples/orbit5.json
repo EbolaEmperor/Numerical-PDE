@@ -1,0 +1,13 @@
+{
+    "Problem": "3-Body Problem",
+    "Method": "Dormand-Prince 8(7)",
+    "Init": [-1,0,0, 1,0,0, 0,0,0, 0.4784306757,0.3771895698,0, 0.4784306757,0.3771895698,0, -0.9568613514,-0.7543791396,0],
+    "T": 199.5148149879,
+    "Periodic": 1,
+    "eps": 1e-8,
+    "Richardson Error Estimate": false,
+    "Output": false,
+    "Dense Output": false,
+    "Dense-Discrete Output": true,
+    "Dense-Discrete Output Step": 0.01
+}

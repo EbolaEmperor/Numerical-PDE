@@ -1,0 +1,9 @@
+{
+    "Condition Type": "Dirichlet",
+    "Reigeon Type": "Regular",
+    "Grid Size": 128,
+    "f": "-(1-sin(x)+cos(x)*cos(x))*exp(sin(x)+y)",
+    "g": "exp(sin(x)+y)",
+    "Error Check": true,
+    "u": "exp(sin(x)+y)"
+}

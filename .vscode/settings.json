@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "*.tcc": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "functional": "cpp",
+        "random": "cpp",
+        "ranges": "cpp",
+        "cmath": "cpp"
+    }
+}

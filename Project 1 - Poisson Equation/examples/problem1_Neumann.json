@@ -1,0 +1,14 @@
+{
+    "Condition Type": "Neumann",
+    "Reigeon Type": "Regular",
+    "Grid Size": 128,
+    "f": "-(1-sin(x)+cos(x)*cos(x))*exp(sin(x)+y)",
+    "g": {
+        "x=0": "-exp(y)",
+        "x=1": "cos(1)*exp(sin(1)+y)",
+        "y=0": "-exp(sin(x))",
+        "y=1": "exp(sin(x)+1)"
+    },
+    "Error Check": true,
+    "u": "exp(sin(x)+y)"
+}

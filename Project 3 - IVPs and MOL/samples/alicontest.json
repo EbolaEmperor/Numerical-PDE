@@ -1,0 +1,15 @@
+{
+    "Problem": "Alibaba Contest",
+    "Method": "Embedded ESDIRK",
+    "Mass Ratio": 2,
+    "Order": 5,
+    "Init": [0, 1],
+    "T": 1000,
+    "Max Step": 1,
+    "eps": 1e-12,
+    "Richardson Error Estimate": false,
+    "Output": false,
+    "Dense Output": false,
+    "Dense-Discrete Output": true,
+    "Dense-Discrete Output Step": 0.02
+}

@@ -1,0 +1,13 @@
+{
+    "Problem": "Hamiltonian",
+    "Method": "Dormand-Prince 8(7)",
+    "Init": [0, 2, 0.4, 0],
+    "T": 996,
+    "Max Step": 100,
+    "eps": 1e-6,
+    "Richardson Error Estimate": false,
+    "Output": false,
+    "Dense Output": false,
+    "Dense-Discrete Output": true,
+    "Dense-Discrete Output Step": 0.02
+}

@@ -1,0 +1,11 @@
+{
+    "Method": "Embedded ESDIRK",
+    "Order": 4,
+    "Space Section": 500,
+    "End Time": 0.5,
+    "Tolerance": 1e-8,
+    "Max Step": 1,
+    "Output": true,
+    "Dense-Discrete Output": false,
+    "Dense-Discrete Output Step": 0.001
+}

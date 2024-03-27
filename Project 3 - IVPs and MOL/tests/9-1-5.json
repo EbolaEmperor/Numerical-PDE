@@ -1,0 +1,17 @@
+{
+   "Dense Output" : false,
+   "Dense-Discrete Output" : true,
+   "Init" : [ 0.99399999999999999, 0, 0, 0, -2.0015851063790824, 0 ],
+   "Mass Ratio" : 0.012277471,
+   "Max Step" : 20,
+   "Method" : "Adaptive Radau-IIA",
+   "Order" : 2,
+   "Output" : true,
+   "Periodic" : 1,
+   "Problem" : "Restricted 3-Body Problem",
+   "Richardson" : false,
+   "Richardson Error Estimate" : true,
+   "T" : 17.065216560157964,
+   "eps" : 2.0000000000000002e-05
+}
+

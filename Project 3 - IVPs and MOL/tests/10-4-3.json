@@ -1,0 +1,13 @@
+{
+   "Dense Output" : false,
+   "Dense-Discrete Output" : false,
+   "Init" : [ 1.5 ],
+   "Max Step" : 3,
+   "Method" : "Adaptive ESDIRK",
+   "Output" : false,
+   "Problem" : "Stiff Sample Problem",
+   "Richardson Error Estimate" : false,
+   "T" : 3,
+   "eps" : 9.9999999999999998e-13
+}
+
