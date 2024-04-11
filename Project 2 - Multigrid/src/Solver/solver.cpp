@@ -1,219 +1,13 @@
 #include "solver.h"
-#include "matrix.h"
-#include "sparseMatrix.h"
+#include "Core/Irregular.h"
+#include "params.h"
 #include <iostream>
-
-//-----------------------------BType------------------------------------
-
-void BType::setBondary(const std::string& bon, const std::string& typ){
-    if(typ != "Dirichlet" && typ != "Neumann"){
-        std::cerr << "Unrecignized bondary '" << typ << "'" << std::endl;
-        exit(-1);
-    }
-    types[bon] = typ;
-}
-
-std::string BType:: operator () (const std::string& bon) const{
-    if(!types.count(bon)){
-        std::cerr << "Undefined bondary '" << bon << "'" << std::endl;
-        exit(-1);
-    }
-    return types.find(bon)->second;
-}
-
-//--------------------------------Basic Tools---------------------------
-
-const int VC_V1 = 3;
-const int VC_V2 = 3;
-const int VC_MAX_ITER = 100;
-const double VC_W = 2.0/3.0;
-const double VC_PI = acos(-1);
-const double VC_EPS = 1e-15;
-
-double lowBon(const double &x){
-    return sin(VC_PI*x)/16;
-}
-
-ColVector zeroGridCol(const int &n, const int &dim){
-    return zeros( (int)round(pow(n+1,dim)), 1 );
-}
-
-void checkDim(const int &dim){
-    if(dim!=1 && dim!=2){
-        std::cerr << "[Error] dimension parameter can only be 1 or 2." << std::endl;
-        exit(-1);
-    }
-}
-
-int IDX(const int &n, const int &i, const int &j){
-    return (n + 1) * i + j;
-}
-
-struct specialPoint{
-    double x, y;
-    specialPoint(): x(0.0), y(0.0) {}
-    specialPoint(const int &n, const int &i, const int &j){
-        double h = 1.0/n;
-        double _x = i*h, _y = j*h;
-        x = _x;
-        y = lowBon(x) + _y * (1.0-lowBon(x));
-    }
-};
-
-//--------------------------------Operators-----------------------------
-
-Operator::Operator(const int &_dim){
-    dim = _dim;
-}
-
-//--------------------------------Injection-----------------------------
-
-injection::injection(const int &_dim):Operator(_dim){}
-
-ColVector injection::operator () (const ColVector &v) const{
-    if(dim==1){
-        ColVector res(v.n/2+1);
-        for(int i = 0; i < res.n; i++){
-            res(i) = v(2*i);
-        }
-        return res;
-    } else {
-        int n = (int)round(sqrt(v.n)) - 1;
-        ColVector res( (n/2+1)*(n/2+1) );
-        for(int i = 0; i <= n/2; i++)
-            for(int j = 0; j <= n/2; j++)
-                res(IDX(n/2,i,j)) = v(IDX(n,2*i,2*j));
-        return res;
-    }
-}
-
-//------------------------------Full Operator--------------------------------
-
-full_operator::full_operator(const int &_dim):Operator(_dim){}
-
-ColVector full_operator::operator () (const ColVector &v) const{
-    if(dim==1){
-        ColVector res(v.n/2+1);
-        for(int i = 1; i < res.n-1; i++){
-            res(i) = 0.25*v(2*i-1) + 0.5*v(2*i) + 0.25*v(2*i+1);
-        }
-        res(0) = v(0);
-        res(v.n/2) = v(v.n-1);
-        return res;
-    } else {
-        int n = (int)round(sqrt(v.n)) - 1;
-        ColVector res( (n/2+1)*(n/2+1) );
-        res(IDX(n/2,0,0)) = v(IDX(n,0,0));
-        res(IDX(n/2,0,n/2)) = v(IDX(n,0,n));
-        res(IDX(n/2,n/2,0)) = v(IDX(n,n,0));
-        res(IDX(n/2,n/2,n/2)) = v(IDX(n,n,n));
-        for(int i = 1; i < n/2; i++){
-            res(IDX(n/2,i,0)) = 0.25*v(IDX(n,2*i-1,0)) + 0.5*v(IDX(n,2*i,0)) + 0.25*v(IDX(n,2*i+1,0));
-            res(IDX(n/2,i,n/2)) = 0.25*v(IDX(n,2*i-1,n)) + 0.5*v(IDX(n,2*i,n)) + 0.25*v(IDX(n,2*i+1,n));
-            res(IDX(n/2,0,i)) = 0.25*v(IDX(n,0,2*i-1)) + 0.5*v(IDX(n,0,2*i)) + 0.25*v(IDX(n,0,2*i+1));
-            res(IDX(n/2,n/2,i)) = 0.25*v(IDX(n,n,2*i-1)) + 0.5*v(IDX(n,n,2*i)) + 0.25*v(IDX(n,n,2*i+1));
-        }
-        for(int i = 1; i < n/2; i++)
-            for(int j = 1; j < n/2; j++){
-                res(IDX(n/2,i,j)) = 0.0625 * (v(IDX(n,2*i-1,2*j-1)) + v(IDX(n,2*i-1,2*j+1)) + v(IDX(n,2*i+1,2*j-1)) + v(IDX(n,2*i+1,2*j+1)))
-                                   + 0.125 * (v(IDX(n,2*i-1,2*j)) + v(IDX(n,2*i+1,2*j)) + v(IDX(n,2*i,2*j-1)) + v(IDX(n,2*i,2*j+1)))
-                                   +  0.25 * v(IDX(n,2*i,2*j));
-            }
-        return res;
-    }
-}
-
-//---------------------------Linear Interpolation-----------------------------
-
-linear_interpolation::linear_interpolation(const int &_dim):Operator(_dim){}
-
-ColVector linear_interpolation::operator () (const ColVector &v) const{
-    if(dim==1){
-        ColVector res(v.n*2-1);
-        for(int i = 0; i < v.n; i++){
-            res(2*i) = v(i);
-            if(i) res(2*i-1) += 0.5*v(i);
-            if(i<v.n-1) res(2*i+1) += 0.5*v(i);
-        }
-        return res;
-    } else {
-        int n = (int)round(sqrt(v.n)) - 1;
-        ColVector res( (2*n+1)*(2*n+1) );
-        for(int i = 0; i <= n; i++)
-            for(int j = 0; j <= n; j++){
-                res(IDX(2*n,2*i,2*j)) = v(IDX(n,i,j));
-                if(i) res(IDX(2*n,2*i-1,2*j)) += 0.5*v(IDX(n,i,j));
-                if(i<n) res(IDX(2*n,2*i+1,2*j)) += 0.5*v(IDX(n,i,j));
-                if(j) res(IDX(2*n,2*i,2*j-1)) += 0.5*v(IDX(n,i,j));
-                if(j<n) res(IDX(2*n,2*i,2*j+1)) += 0.5*v(IDX(n,i,j));
-                if(i && j) res(IDX(2*n,2*i-1,2*j-1)) += 0.25*v(IDX(n,i,j));
-                if(i && j<n) res(IDX(2*n,2*i-1,2*j+1)) += 0.25*v(IDX(n,i,j));
-                if(i<n && j) res(IDX(2*n,2*i+1,2*j-1)) += 0.25*v(IDX(n,i,j));
-                if(i<n && j<n) res(IDX(2*n,2*i+1,2*j+1)) += 0.25*v(IDX(n,i,j));
-            }
-        return res;
-    }
-}
-
-//---------------------------Quadradic Interpolation-----------------------------
-
-quadradic_interpolation::quadradic_interpolation(const int &_dim):Operator(_dim){}
-
-ColVector quadradic_interpolation::operator () (const ColVector &v) const{
-    if(v.n <= 2){
-        //点数少于2个无法二次插值
-        linear_interpolation lin(dim);
-        return lin(v);
-    }
-    if(dim==1){
-        ColVector res(v.n*2-1);
-        for(int i = 0; i < v.n; i++)
-            res(2*i) = v(i);
-        res(1) = 0.375*v(0) + 0.75*v(1) - 0.125*v(2);
-        res(res.n-2) = 0.375*v(v.n-1) + 0.75*v(v.n-2) - 0.125*v(v.n-3);
-        for(int i = 1; i < v.n-2; i++)
-            res(2*i+1) = 9.0/16.0*(v(i)+v(i+1)) - 1.0/16.0*(v(i-1)+v(i+2));
-        return res;
-    } else {
-        int n = (int)round(sqrt(v.n)) - 1;
-        ColVector res( (2*n+1)*(2*n+1) );
-        for(int i = 0; i <= n; i++)
-            for(int j = 0; j <= n; j++)
-                res(IDX(2*n,2*i,2*j)) = v(IDX(n,i,j));
-        for(int i = 0; i <= n; i++){
-            res(IDX(2*n,2*i,1)) = 0.375*v(IDX(n,i,0)) + 0.75*v(IDX(n,i,1)) - 0.125*v(IDX(n,i,2));
-            res(IDX(2*n,2*i,2*n-1)) = 0.375*v(IDX(n,i,n)) + 0.75*v(IDX(n,i,n-1)) - 0.125*v(IDX(n,i,n-2));
-            for(int j = 1; j < n-1; j++)
-                res(IDX(2*n,2*i,2*j+1)) = 9.0/16.0*(v(IDX(n,i,j))+v(IDX(n,i,j+1))) - 1.0/16.0*(v(IDX(n,i,j-1))+v(IDX(n,i,j+2)));
-        }
-        for(int j = 0; j <= n; j++){
-            res(IDX(2*n,1,2*j)) = 0.375*v(IDX(n,0,j)) + 0.75*v(IDX(n,1,j)) - 0.125*v(IDX(n,2,j));
-            res(IDX(2*n,2*n-1,2*j)) = 0.375*v(IDX(n,n,j)) + 0.75*v(IDX(n,n-1,j)) - 0.125*v(IDX(n,n-2,j));
-            for(int i = 1; i < n-1; i++)
-                res(IDX(2*n,2*i+1,2*j)) = 9.0/16.0*(v(IDX(n,i,j))+v(IDX(n,i+1,j))) - 1.0/16.0*(v(IDX(n,i-1,j))+v(IDX(n,i+2,j)));
-        }
-        res(IDX(2*n,1,1)) = 0.5*(v(IDX(n,0,1))+v(IDX(n,1,0))) + 0.25*v(IDX(n,1,1)) - 0.125*(v(IDX(n,0,2))+v(IDX(n,2,0)));
-        res(IDX(2*n,1,2*n-1)) = 0.5*(v(IDX(n,0,n-1))+v(IDX(n,1,n))) + 0.25*v(IDX(n,1,n-1)) - 0.125*(v(IDX(n,0,n-2))+v(IDX(n,2,n)));
-        res(IDX(2*n,2*n-1,1)) = 0.5*(v(IDX(n,n-1,0))+v(IDX(n,n,1))) + 0.25*v(IDX(n,n-1,1)) - 0.125*(v(IDX(n,n-2,0))+v(IDX(n,n,2)));
-        res(IDX(2*n,2*n-1,2*n-1)) = 0.5*(v(IDX(n,n,n-1))+v(IDX(n,n-1,n))) + 0.25*v(IDX(n,n-1,n-1)) - 0.125*(v(IDX(n,n,n-2))+v(IDX(n,n-2,n)));
-        for(int i = 1; i < n-1; i++){
-            res(IDX(2*n,1,2*i+1)) = 0.25*(v(IDX(n,0,i))+v(IDX(n,0,i+1))) + 0.375*(v(IDX(n,1,i))+v(IDX(n,1,i+1))) - 0.0625*(v(IDX(n,0,i-1))+v(IDX(n,0,i+2))+v(IDX(n,2,i))+v(IDX(n,2,i+1)));
-            res(IDX(2*n,2*i+1,1)) = 0.25*(v(IDX(n,i,0))+v(IDX(n,i+1,0))) + 0.375*(v(IDX(n,i,1))+v(IDX(n,i+1,1))) - 0.0625*(v(IDX(n,i-1,0))+v(IDX(n,i+2,0))+v(IDX(n,i,2))+v(IDX(n,i+1,2)));
-            res(IDX(2*n,2*n-1,2*i+1)) = 0.25*(v(IDX(n,n,i))+v(IDX(n,n,i+1))) + 0.375*(v(IDX(n,n-1,i))+v(IDX(n,n-1,i+1))) - 0.0625*(v(IDX(n,n,i-1))+v(IDX(n,n,i+2))+v(IDX(n,n-2,i))+v(IDX(n,n-2,i+1)));
-            res(IDX(2*n,2*i+1,2*n-1)) = 0.25*(v(IDX(n,i,n))+v(IDX(n,i+1,n))) + 0.375*(v(IDX(n,i,n-1))+v(IDX(n,i+1,n-1))) - 0.0625*(v(IDX(n,i-1,n))+v(IDX(n,i+2,n))+v(IDX(n,i,n-2))+v(IDX(n,i+1,n-2)));
-        }
-        for(int i = 1; i < n-1; i++)
-            for(int j = 1; j < n-1; j++){
-                res(IDX(2*n,2*i+1,2*j+1)) = 5.0/16.0 * (v(IDX(n,i,j))+v(IDX(n,i+1,j))+v(IDX(n,i,j+1))+v(IDX(n,i+1,j+1)))
-                                            -1.0/32.0 * (v(IDX(n,i,j-1))+v(IDX(n,i,j+2))+v(IDX(n,i-1,j))+v(IDX(n,i-1,j+1))+v(IDX(n,i+1,j-1))+v(IDX(n,i+1,j+2))+v(IDX(n,i+2,j))+v(IDX(n,i+2,j+1)));
-            }
-        return res;
-    }
-}
 
 //--------------------------------rootSolver--------------------------------
 
-rootSolver::rootSolver(const Operator & restriction, const Operator & prolongation)
+template <int Dim>
+Solver<Dim>::Solver(const IntergridOp<Dim> & restriction, 
+                    const IntergridOp<Dim> & prolongation)
     : restriction(restriction), prolongation(prolongation){
     eps = 1e-16;
     maxiter = VC_MAX_ITER;
@@ -223,7 +17,8 @@ rootSolver::rootSolver(const Operator & restriction, const Operator & prolongati
     nineStencil = false;
 }
 
-void rootSolver::setCycle(const std::string &cy){
+template <int Dim>
+void Solver<Dim>::setCycle(const std::string &cy){
     if(cy=="V") cycle = 1;
     else if(cy=="FMG") cycle = 2;
     else{
@@ -232,52 +27,32 @@ void rootSolver::setCycle(const std::string &cy){
     }
 }
 
-void rootSolver::setEps(const double &_eps){
-    eps = _eps;
-}
-
-void rootSolver::setMaxiter(const int &N){
-    maxiter = N;
-}
-
-bool rootSolver::isPureNeumann() const{
-    return pure_Neumann;
-}
-
-void rootSolver::init(const int &_n, const Function &f, const Function &g, const std::string &bon){
-    init(_n, f, g, bon, BType());
-}
-
-ColVector rootSolver::VC(const int &d, const int &n, ColVector v, const ColVector &f){
+template <int Dim>
+ColVector Solver<Dim>::VC(const int &d, const int &n, ColVector v, const ColVector &f){
     const SparseMatrix & A = Ah[d];
     for(int i = 0; i < VC_V1; i++)
         v = A.wJacobi(v, f, VC_W);
     if(n > 2){
-        v = v + prolongation( VC(d+1, n/2, zeroGridCol(n/2,dim), restriction(f-A*v)) );
+        v = v + prolongation( VC(d+1, n/2, zeroGridCol(n/2,Dim), restriction(f-A*v)) );
     }
     for(int i = 0; i < VC_V2; i++)
         v = A.wJacobi(v, f, VC_W);
     return v;
 }
 
-ColVector rootSolver::FMG(const int &d, const int &n, const ColVector &f){
+template <int Dim>
+ColVector Solver<Dim>::FMG(const int &d, const int &n, const ColVector &f){
     ColVector v;
     if(n > 2){
         v = prolongation( FMG(d+1, n/2, restriction(f)) );
     } else {
-        v = zeroGridCol(n,dim);
+        v = zeroGridCol(n,Dim);
     }
     return VC(d, n, v, f);
 }
 
-void rootSolver::initAh(){
-    // 初始化每一层的Ah，以减少VC过程中重复申请大量内存
-    for(int i = n; i >= 2; i >>= 1){
-        Ah.push_back(getAh(i));
-    }
-}
-
-void rootSolver::solve(){
+template <int Dim>
+void Solver<Dim>::solve(){
     std::cout << "Preparing coefficient matrixs..." << std::endl;
     initAh();
     const SparseMatrix &A = Ah[0];
@@ -288,7 +63,7 @@ void rootSolver::solve(){
         T++;
         std::cout << "Iteration " << T << "...";
         if(cycle==1)
-            upd = VC(0, n, zeroGridCol(n,dim), b-A*cur);
+            upd = VC(0, n, zeroGridCol(n,Dim), b-A*cur);
         else if(cycle==2)
             upd = FMG(0, n, b-A*cur);
         else{
@@ -307,22 +82,10 @@ void rootSolver::solve(){
     Ah.clear();
 }
 
-void rootSolver::setIrregular(const bool &rhs){
-    irregular = rhs;
-}
+//------------------------------Solver 1D-------------------------------------
 
-void rootSolver::useNineStencil(){
-    nineStencil = true;
-}
-
-//--------------------------------Solver 1D--------------------------------
-
-Solver1D::Solver1D(const Operator & restriction, const Operator & prolongation)
-    : rootSolver(restriction, prolongation){
-    dim = 1;
-}
-
-void Solver1D::init(const int &_n, const Function &f, const Function &g, const std::string &bon, const BType &_bonDetail){
+template<>
+void Solver<1>::init(const int &_n, const Function<1> &f, const Function<1> &g, const std::string &bon, const BType &_bonDetail){
     n = _n;
     bondary = bon;
     bonDetail = _bonDetail;
@@ -338,7 +101,8 @@ void Solver1D::init(const int &_n, const Function &f, const Function &g, const s
         pure_Neumann = true;
 }
 
-SparseMatrix Solver1D::getAh(const int &n) const{
+template<>
+SparseMatrix Solver<1>::getAh(const int &n) const{
     double h = 1.0/n;
     std::vector<Triple> ele;
     for(int i = 1; i < n; i++){
@@ -363,13 +127,15 @@ SparseMatrix Solver1D::getAh(const int &n) const{
     return SparseMatrix(n+1, n+1, ele);
 }
 
-void Solver1D::output(std::ostream &out) const{
+template<>
+void Solver<1>::output(std::ostream &out) const{
     out << std::fixed << std::setprecision(16);
     for(int i = 0; i <= n; i++)
         out << 1.0*i/n << " " << cur(i) << "\n";
 }
 
-double Solver1D::calcNeumannC(const Function &u){
+template<>
+double Solver<1>::calcNeumannC(const Function<1> &u){
     double l = 1e100, r = -1e100;
     double h = 1.0/n;
     for(int i = 0; i <= n; i++){
@@ -379,7 +145,8 @@ double Solver1D::calcNeumannC(const Function &u){
     return neumannC = (l+r)/2;
 }
 
-double Solver1D::checkError(const Function &u, const Norm &norm) const{
+template<>
+double Solver<1>::checkError(const Function<1> &u, const Norm &norm) const{
     std::vector<double> vals;
     double h = 1.0/n;
     for(int i = 0; i <= n; i++)
@@ -573,13 +340,8 @@ ColVector specialSolveLowNeumann_RDcorner(const int &n){
 
 //--------------------------------Solver 2D--------------------------------
 
-Solver2D::Solver2D(const Operator & restriction, const Operator & prolongation)
-    : rootSolver(restriction, prolongation){
-    dim = 2;
-    nineStencil = false;
-}
-
-void Solver2D::init(const int &_n, const Function &f, const Function &g, const std::string &bon, const BType &_bonDetail){
+template<>
+void Solver<2>::init(const int &_n, const Function<2> &f, const Function<2> &g, const std::string &bon, const BType &_bonDetail){
     n = _n;
     bondary = bon;
     bonDetail = _bonDetail;
@@ -613,7 +375,8 @@ void Solver2D::init(const int &_n, const Function &f, const Function &g, const s
         pure_Neumann = true;
 }
 
-SparseMatrix Solver2D::getAh(const int &n) const{
+template<>
+SparseMatrix Solver<2>::getAh(const int &n) const{
     double h = 1.0/n;
     std::vector<Triple> ele;
     for(int i = 1; i < n; i++)
@@ -745,7 +508,8 @@ SparseMatrix Solver2D::getAh(const int &n) const{
     return SparseMatrix( (n+1)*(n+1), (n+1)*(n+1), ele );
 }
 
-void Solver2D::output(std::ostream &out) const{
+template<>
+void Solver<2>::output(std::ostream &out) const{
     out << std::fixed << std::setprecision(16);
     double h = 1.0/n;
     for(int i = 0; i <= n; i++)
@@ -756,7 +520,8 @@ void Solver2D::output(std::ostream &out) const{
         }
 }
 
-double Solver2D::calcNeumannC(const Function &u){
+template<>
+double Solver<2>::calcNeumannC(const Function<2> &u){
     double l = 1e100, r = -1e100;
     double h = 1.0/n;
     for(int i = 0; i <= n; i++)
@@ -769,7 +534,8 @@ double Solver2D::calcNeumannC(const Function &u){
     return neumannC = (l+r)/2;
 }
 
-double Solver2D::checkError(const Function &u, const Norm &norm) const{
+template<>
+double Solver<2>::checkError(const Function<2> &u, const Norm &norm) const{
     std::vector<double> vals;
     double h = 1.0/n;
     for(int i = 0; i <= n; i++)
@@ -780,3 +546,6 @@ double Solver2D::checkError(const Function &u, const Norm &norm) const{
         }
     return norm(vals);
 }
+
+template class Solver<1>;
+template class Solver<2>;

@@ -145,4 +145,12 @@ ColVector operator * (const Matrix &A, const ColVector &x);
 RowVector operator * (const RowVector &x, const Matrix &A);
 double operator * (const RowVector &r, const ColVector &c);
 
+inline int IDX(const int &n, const int &i, const int &j){
+    return (n + 1) * i + j;
+}
+
+inline ColVector zeroGridCol(const int &n, const int &dim){
+    return zeros( (int)round(pow(n+1,dim)), 1 );
+}
+
 #endif

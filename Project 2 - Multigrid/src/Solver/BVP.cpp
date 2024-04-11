@@ -1,6 +1,13 @@
 #include "BVP.h"
 #include "solver.h"
-#include "mathExpr.h"
+
+#include "Core/mathExpr.h"
+
+#include "IntergridOp/Injection.h"
+#include "IntergridOp/FullWeighting.h"
+#include "IntergridOp/LinearInterpolation.h"
+#include "IntergridOp/QuadraticInterpolation.h"
+
 #include <cmath>
 #include <iostream>
 #include <fstream>
@@ -16,165 +23,14 @@ using std::cerr;
 using std::endl;
 using std::string;
 using std::vector;
-const double eps = 1e-15;
 
 void error(const string &er){
     cerr << "[Error] " << er << endl;
     exit(-1);
 }
 
-class Fun1D : public Function1D{
-private:
-    Expression e;
-public:
-    Fun1D(){
-        e.addVariable("x");
-    }
-    void setExpr(const std::string &expr){
-        e.setExpr(expr);
-    }
-    double operator () (const double &x) const{
-        vector<double> parm;
-        parm.push_back(x);
-        return e(parm);
-    }
-};
-
-class Fun2D : public Function2D{
-private:
-    Expression e, Delta_e;
-public:
-    Fun2D(){}
-    void setExpr(const std::string &expr){
-        e.addVariable("x");
-        e.addVariable("y");
-        e.setExpr(expr);
-    }
-    void setDeltaExpr(const std::string &expr){
-        Delta_e.addVariable("x");
-        Delta_e.addVariable("y");
-        Delta_e.setExpr(expr);
-    }
-    double operator () (const double &x, const double &y) const{
-        vector<double> parm;
-        parm.push_back(x);
-        parm.push_back(y);
-        return e(parm);
-    }
-    double delta(const double &x, const double &y) const{
-        vector<double> parm;
-        parm.push_back(x);
-        parm.push_back(y);
-        return Delta_e(parm);
-    }
-};
-
-class BFun1D : public Function1D{
-private:
-    Expression e[2];
-public:
-    BFun1D(){}
-    void setExpr(const std::string &bon, const std::string &expr){
-        if(bon == "x=0") e[0].setExpr(expr);
-        else if(bon == "x=1") e[1].setExpr(expr);
-        else {
-            cerr << "[Error] Unrecognized bondary '" << bon << "'" << endl;
-            exit(-1);
-        }
-    }
-    double operator () (const double &x) const{
-        vector<double> parm;
-        if(fabs(x) < eps) return e[0](parm);
-        else if(fabs(x-1) < eps) return e[1](parm);
-        else{
-            cerr << "[Error] Point (" << x << ") is not on the bondary" << endl;
-            exit(-1);
-        } 
-    }
-};
-
-class BFun2D : public Function2D{
-private:
-    Expression e[4];
-public:
-    BFun2D(){
-        for(int i = 0; i < 4; i++){
-            e[i].addVariable("x");
-            e[i].addVariable("y");
-        }
-    }
-    void addConstant(const std::string &bon, const std::string & name, const double &val){
-        if(bon == "x=0") e[0].addConstant(name, val);
-        else if(bon == "x=1") e[1].addConstant(name, val);
-        else if(bon == "Down Bondary") e[2].addConstant(name, val);
-        else if(bon == "y=1") e[3].addConstant(name, val);
-        else {
-            cerr << "[Error] Unrecognized bondary '" << bon << "'" << endl;
-            exit(-1);
-        }
-    }
-    void setExpr(const std::string &bon, const std::string &expr){
-        if(bon == "x=0") e[0].setExpr(expr);
-        else if(bon == "x=1") e[1].setExpr(expr);
-        else if(bon == "Down Bondary") e[2].setExpr(expr);
-        else if(bon == "y=1") e[3].setExpr(expr);
-        else {
-            cerr << "[Error] Unrecognized bondary '" << bon << "'" << endl;
-            exit(-1);
-        }
-    }
-    double operator () (const double &x, const double &y) const{
-        vector<double> parm;
-        parm.push_back(x);
-        parm.push_back(y);
-        if(fabs(y) < eps) return e[2](parm);
-        else if(fabs(y-1) < eps) return e[3](parm);
-        else if(fabs(x) < eps) return e[0](parm);
-        else if(fabs(x-1) < eps) return e[1](parm);
-        else if(fabs(y-lowBon(x)) < eps) return e[2](parm);
-        else{
-            cerr << "[Error] Point (" << x << "," << y << ") is not on the bondary" << endl;
-            exit(-1);
-        } 
-    }
-};
-
-class Norm_p : public Norm{
-private:
-    double p;
-public:
-    Norm_p(const int &p): p(p) {}
-    double operator () (const std::vector<double> &vec) const{
-        double sum = 0;
-        for(const double &x : vec)
-            sum += pow(fabs(x), p);
-        sum /= vec.size();
-        return pow(sum, 1.0/p);
-    }
-};
-
-class Norm_inf : public Norm{
-public:
-    double operator () (const std::vector<double> &vec) const{
-        double mx = 0;
-        for(const double &x : vec)
-            mx = std::max(mx, fabs(x));
-        return mx;
-    }
-};
-
-BVP::BVP(){}
-BVP::BVP(const Json::Value & prob){
-    read(prob);
-}
-BVP::BVP(const char * ifile){
-    read(ifile);
-}
-BVP::BVP(const std::string & ifile){
-    read(ifile);
-}
-
-void BVP::printProblem(){
+template <int Dim>
+void BVP<Dim>::printProblem(){
     checkParse();
     cout << "----------------------------------------------------------" << endl;
     cout << "BVP with " << problem["Condition Type"].asString() << " Condition" << endl;
@@ -224,11 +80,8 @@ void BVP::printProblem(){
     cout << "Grid Size: " << problem["Grid Size"].asInt() << endl;
 }
 
-void BVP::read(const Json::Value &prob){
-    problem = prob;
-}
-
-void BVP::read(const string & fname){
+template <int Dim>
+void BVP<Dim>::read(const string & fname){
     Json::Reader reader;
     ifstream ifs;
     ifs.open(fname);
@@ -242,7 +95,8 @@ void BVP::read(const string & fname){
     }
 }
 
-void BVP::read(const char * fname){
+template <int Dim>
+void BVP<Dim>::read(const char * fname){
     Json::Reader reader;
     ifstream ifs;
     ifs.open(fname);
@@ -256,7 +110,8 @@ void BVP::read(const char * fname){
     }
 }
 
-void BVP::checkParse(){
+template <int Dim>
+void BVP<Dim>::checkParse(){
     if(problem["Condition Type"].asString() != "Dirichlet" && 
        problem["Condition Type"].asString() != "Neumann" && 
        problem["Condition Type"].asString() != "mixed"){
@@ -264,6 +119,9 @@ void BVP::checkParse(){
     }
     if(problem["Dimension"].asInt() != 1 && problem["Dimension"].asInt() != 2){
         error("The 'Dimension' can only be 1 or 2.");
+    }
+    if(problem["Dimension"].asInt() != Dim){
+        error("The 'Dimension' does not match the template parameter <Dim>");
     }
     int dim = problem["Dimension"].asInt();
     if(dim == 2 && problem["Reigeon Type"].asString() != "Regular" && problem["Reigeon Type"].asString() != "Irregular"){
@@ -330,56 +188,54 @@ void BVP::checkParse(){
     }
 }
 
-void BVP::solve(){
-    checkParse();
-    Fun2D f, g1;
-    BFun2D g2;
-    Fun1D f1D;
-    BFun1D g1D;
-    Function2D *g;
-    BType bonDtil;
-
-    const int m = problem["Grid Size"].asInt();
-    const int dim = problem["Dimension"].asInt();
-
-    if(dim == 2){
-        f.setExpr(problem["f"].asString());
-        if(problem["9-stencil"].isBool()){
-            f.setDeltaExpr(problem["Delta f"].asString());
-        }
-        if( !problem["g"].isObject() ){
-            g1.setExpr(problem["g"].asString());
-            g = &g1;
-        } else {
-            if(problem["Condition Type"].asString() == "mixed"){
-                g2.setExpr("x=0", problem["g"]["x=0"][0].asString());
-                g2.setExpr("x=1", problem["g"]["x=1"][0].asString());
-                g2.setExpr("Down Bondary", problem["g"]["Down Bondary"][0].asString());
-                g2.setExpr("y=1", problem["g"]["y=1"][0].asString());
-                bonDtil.setBondary("x=0", problem["g"]["x=0"][1].asString());
-                bonDtil.setBondary("x=1", problem["g"]["x=1"][1].asString());
-                bonDtil.setBondary("Down Bondary", problem["g"]["Down Bondary"][1].asString());
-                bonDtil.setBondary("y=1", problem["g"]["y=1"][1].asString());
-            } else {
-                g2.setExpr("x=0", problem["g"]["x=0"].asString());
-                g2.setExpr("x=1", problem["g"]["x=1"].asString());
-                g2.setExpr("Down Bondary", problem["g"]["Down Bondary"].asString());
-                g2.setExpr("y=1", problem["g"]["y=1"].asString());
-            }
-            g = &g2;
-        }
+template <>
+void BVP<1>::setFunctions(){
+    f.setExpr(problem["f"].asString());
+    if(problem["Condition Type"].asString() == "mixed"){
+        _g.setExpr("x=0", problem["g"]["x=0"][0].asString());
+        _g.setExpr("x=1", problem["g"]["x=1"][0].asString());
+        bonDtil.setBondary("x=0", problem["g"]["x=0"][1].asString());
+        bonDtil.setBondary("x=1", problem["g"]["x=1"][1].asString());
     } else {
-        f1D.setExpr(problem["f"].asString());
+        _g.setExpr("x=0", problem["g"]["x=0"].asString());
+        _g.setExpr("x=1", problem["g"]["x=1"].asString());
+    }
+    g = &_g;
+}
+
+template <>
+void BVP<2>::setFunctions(){
+    f.setExpr(problem["f"].asString());
+    if(problem["9-stencil"].isBool()){
+        f.setDeltaExpr(problem["Delta f"].asString());
+    }
+    if( !problem["g"].isObject() ){
+        feg.setExpr(problem["g"].asString());
+        g = &feg;
+    } else {
         if(problem["Condition Type"].asString() == "mixed"){
-            g1D.setExpr("x=0", problem["g"]["x=0"][0].asString());
-            g1D.setExpr("x=1", problem["g"]["x=1"][0].asString());
+            _g.setExpr("x=0", problem["g"]["x=0"][0].asString());
+            _g.setExpr("x=1", problem["g"]["x=1"][0].asString());
+            _g.setExpr("Down Bondary", problem["g"]["Down Bondary"][0].asString());
+            _g.setExpr("y=1", problem["g"]["y=1"][0].asString());
             bonDtil.setBondary("x=0", problem["g"]["x=0"][1].asString());
             bonDtil.setBondary("x=1", problem["g"]["x=1"][1].asString());
+            bonDtil.setBondary("Down Bondary", problem["g"]["Down Bondary"][1].asString());
+            bonDtil.setBondary("y=1", problem["g"]["y=1"][1].asString());
         } else {
-            g1D.setExpr("x=0", problem["g"]["x=0"].asString());
-            g1D.setExpr("x=1", problem["g"]["x=1"].asString());
+            _g.setExpr("x=0", problem["g"]["x=0"].asString());
+            _g.setExpr("x=1", problem["g"]["x=1"].asString());
+            _g.setExpr("Down Bondary", problem["g"]["Down Bondary"].asString());
+            _g.setExpr("y=1", problem["g"]["y=1"].asString());
         }
+        g = &_g;
     }
+}
+
+template <int Dim>
+void BVP<Dim>::solve(){
+    checkParse();
+    setFunctions();
 
     cout << "----------------------------------------------------------" << endl;
     cout << "Method: " << problem["Cycle Type"].asString() << "-Cycle" << endl;
@@ -388,22 +244,19 @@ void BVP::solve(){
     cout << "Prepareing solver..." << endl;
 
     int cur = clock();
-    Operator *restri, *prolong;
+    IntergridOp<Dim> *restri, *prolong;
 
     if(problem["Restriction"].asString() == "injection")
-        restri = new injection(dim);
+        restri = new Injection<Dim>;
     else if(problem["Restriction"].asString() == "full operator")
-        restri = new full_operator(dim);
+        restri = new FullWeighting<Dim>;
     
     if(problem["Prolongation"].asString() == "linear")
-        prolong = new linear_interpolation(dim);
+        prolong = new LinearInterpolation<Dim>;
     else if(problem["Prolongation"].asString() == "quadradic")
-        prolong = new quadradic_interpolation(dim);
-    
-    if(dim == 2)
-        solver = new Solver2D(*restri, *prolong);
-    else
-        solver = new Solver1D(*restri, *prolong);
+        prolong = new QuadradicInterpolation<Dim>;
+
+    solver = new Solver<Dim>(*restri, *prolong);
     
     if(problem["9-stencil"].isBool()){
         solver -> useNineStencil();
@@ -411,10 +264,8 @@ void BVP::solve(){
     if(problem["Reigeon Type"].asString() == "Irregular")
         solver -> setIrregular(true);
     
-    if(dim == 2)
-        solver -> init(m, f, *g, problem["Condition Type"].asString(), bonDtil);
-    else
-        solver -> init(m, f1D, g1D, problem["Condition Type"].asString(), bonDtil);
+    int m = problem["Grid Size"].asInt();
+    solver -> init(m, f, *g, problem["Condition Type"].asString(), bonDtil);
     
     solver -> setCycle(problem["Cycle Type"].asString());
     if(problem["eps"].isDouble())
@@ -427,51 +278,48 @@ void BVP::solve(){
     cout << "Solved in " << timecost << "s" << endl;
 }
 
-void BVP::output(std::ostream &out){
+template <int Dim>
+void BVP<Dim>::output(std::ostream &out){
     cout << "----------------------------------------------------------" << endl;
     solver -> output(out);
     cout << "Results have been saved to result.txt" << endl;
 }
 
-void BVP::output(const std::string &ofile){
+template <int Dim>
+void BVP<Dim>::output(const std::string &ofile){
     ofstream fout(ofile);
     output(fout);
 }
 
-void BVP::output(){
+template <int Dim>
+void BVP<Dim>::output(){
     output(cout);
 }
 
-std::vector<double> BVP::checkError(){
+template <int Dim>
+std::vector<double> BVP<Dim>::checkError(){
     if(!problem["Error Check"].asBool())
         return std::vector<double>();
-    Function *pu;
-    Fun2D u2D;
-    Fun1D u1D;
+    FuncExpr<Dim> u;
     cout << "----------------------------------------------------------" << endl;
-    int dim = problem["Dimension"].asInt();
 
-    if(dim == 2){
-        cout << "u(x,y) = " << problem["u"].asString() << endl;
-        u2D.setExpr(problem["u"].asString());
-        pu = &u2D;
-    } else {
-        cout << "u(x) = " << problem["u"].asString() << endl;
-        u1D.setExpr(problem["u"].asString());
-        pu = &u1D;
-    }
+    cout << "u(x,y) = " << problem["u"].asString() << endl;
+    u.setExpr(problem["u"].asString());
     
-    if(solver->isPureNeumann()) solver->calcNeumannC(*pu);
+    if(solver->isPureNeumann()) solver->calcNeumannC(u);
 
     std::vector<double> err;
-    err.push_back(solver->checkError(*pu, Norm_p(1)));
+    err.push_back(solver->checkError(u, Norm_p(1)));
     cout << "1-norm error: " << err.back() << endl;
 
-    err.push_back(solver->checkError(*pu, Norm_p(2)));
+    err.push_back(solver->checkError(u, Norm_p(2)));
     cout << "2-norm error: " << err.back() << endl;
 
-    err.push_back(solver->checkError(*pu, Norm_inf()));
+    err.push_back(solver->checkError(u, Norm_inf()));
     cout << "max-norm error: " << err.back() << endl;
 
     return err;
 }
+
+template class BVP<1>;
+template class BVP<2>;

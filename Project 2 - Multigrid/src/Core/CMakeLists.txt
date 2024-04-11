@@ -1,0 +1,16 @@
+set(Core_Files
+    Core/BFuncExpr.cpp
+    Core/BFuncExpr.h
+    Core/FuncExpr.cpp
+    Core/FuncExpr.h
+    Core/Function.h
+    Core/Irregular.h
+    Core/mathExpr.cpp
+    Core/mathExpr.h
+    Core/matrix.cpp
+    Core/matrix.h
+    Core/Norm.h
+    Core/sparseMatrix.cpp
+    Core/sparseMatrix.h
+    PARENT_SCOPE
+)

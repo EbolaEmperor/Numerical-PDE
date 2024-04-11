@@ -1,8 +1,8 @@
-#include "BVP.h"
+#include "Solver/BVP.h"
 using namespace std;
 
 int main(int argc, char* argv[]){
-    BVP bvp;
+    BVP<1> bvp;
     bvp.read(argv[1]);
     bvp.printProblem();
     bvp.solve();

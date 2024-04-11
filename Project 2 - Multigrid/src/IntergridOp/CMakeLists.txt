@@ -1,0 +1,13 @@
+set(IntergridOp_Files
+    IntergridOp/FullWeighting.cpp
+    IntergridOp/FullWeighting.h
+    IntergridOp/Injection.cpp
+    IntergridOp/Injection.h
+    IntergridOp/IntergridOp.cpp
+    IntergridOp/IntergridOp.h
+    IntergridOp/LinearInterpolation.cpp
+    IntergridOp/LinearInterpolation.h
+    IntergridOp/QuadraticInterpolation.cpp
+    IntergridOp/QuadraticInterpolation.h
+    PARENT_SCOPE
+)

@@ -1,5 +1,4 @@
-#ifndef _MATHEXPR_H_
-#define _MATHEXPR_H
+#pragma once
 
 #include <map>
 #include <string>
@@ -26,5 +25,3 @@ public:
     double eval() const;
     double operator () (const std::vector<double> &parm) const;
 };
-
-#endif
