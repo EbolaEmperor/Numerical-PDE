@@ -17,10 +17,10 @@
 % 如果参考文献太多的话，可以像下面这样调整字体：
 % \tiny\bibliographystyle{plain}
 
-\title{多重网格大作业报告}
+\title{多重网格大作业}
 % \subtitle{毕业设计答辩}
 \institute{浙江大学\ \ \ \ 数学科学学院}
-\date{2023/5/23}
+\date{2024/4/10}
 \usepackage{College}
 
 % defs
@@ -45,7 +45,7 @@
 
 \begin{document}
 
-\author{黄文\hbox{\scalebox{0.6}[1]{羽}\kern-.1em\scalebox{0.5}[1]{中}}\ \ \ \ 3200100006\\ 数学与应用数学（强基计划）}
+\author{黄文\hbox{\scalebox{0.6}[1]{羽}\kern-.1em\scalebox{0.5}[1]{中}}\ \ \ \ (EbolaEmperor)}
 
 \kaishu
 \begin{frame}
@@ -65,12 +65,35 @@
 
 \section{一维情形}
 
+\begin{frame}{V-Cycle}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{pic/v.png}
+\end{figure}
+
+\end{frame}
+
+\begin{frame}{FMG-Cycle}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{pic/FMG.png}
+\end{figure}
+
+\end{frame}
+
 \begin{frame}{FMG的重复迭代}
 理论上，一次完整的FMG就可以达到二阶精度，但是实践中，有进一步的提升空间。
-\vspace{1em}
+\vspace{1em}\pause
 
 假设FMG第一次迭代的结果为$\mathbf{v}$，我们可以令$\mathbf{f}'=\mathbf{f}-A\mathbf{v}$，然后将$\mathbf{f'}$作为方程右边提供给求解器，重复FMG求得$\mathbf{v}'$，此时$\mathbf{v}+\mathbf{v}'$即为两次FMG的结果。如此反复，就可以让FMG-Cycle执行多次迭代，以达到更高的求解精度。
-\vspace{1em}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.4\textwidth]{pic/solve.png}
+\end{figure}
+
+\vspace{1em}\pause
 
 在一维情形中如果使用full-weighting + 二次插值，那么一次FMG就足够达到机器精度了。二维情形则需要多次FMG以提高精度。
 \end{frame}
@@ -90,7 +113,7 @@
 \pause
 将上面两式相加，再乘$\frac{1}{2}$，即可得到中心对称的二次插值公式：
 \begin{equation}
-  U^{h/2}_{2i+1} = \frac{9}{16}U^h_{i} + \frac{9}{16}U^h_{i+1} - \frac{1}{16}U^h_{i-1} - \frac{1}{16}U^h_{i+2} + O(h^3).
+  U^{h/2}_{2i+1} = \frac{9}{16}U^h_{i} + \frac{9}{16}U^h_{i+1} - \frac{1}{16}U^h_{i-1} - \frac{1}{16}U^h_{i+2} + O(h^4).
 \end{equation}
 
 \pause
@@ -118,6 +141,43 @@ An open problem.
 \end{frame}
 
 \section{二维情形}
+
+\begin{frame}{二维情形的双线性插值}
+  \small
+ \begin{figure}[H]
+  \centering
+  \includegraphics[width=0.3\textwidth]{pic/bilinear.jpg}
+\end{figure}
+
+\begin{itemize}
+	\item 对于黑色的点，直接取粗网格点上的值；
+	\item 对于蓝色的点，取粗网格上左右（或上下）两个点的平均值；
+	\item 对于橙色的点，取粗网格四个角上所有点的平均值。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{二维情形的 “真” 线性插值}
+  \small
+ \begin{figure}[H]
+  \centering
+  \includegraphics[width=0.3\textwidth]{pic/linear.jpg}
+\end{figure}
+
+对于每个三角形，我们可以用三角形三个顶点处的函数值拟合一个
+一次函数 $p(x,y)=Ax+By+c$，
+然后用这个函数计算蓝点、橙点的值。
+
+\vspace{1em}\pause
+
+上述做法等价于：
+\begin{itemize}
+	\item 对于黑色的点，直接取粗网格点上的值；
+	\item 对于蓝色的点，取粗网格上左右（或上下）两个点的平均值；
+	\item 对于橙色的点，取粗网格左上角、右下角两个点的平均值
+\end{itemize}
+
+事实上，这才是真正的线性插值，它和双线性插值相比，唯一的区别在于橙色的点如何计算。
+\end{frame}
 
 \begin{frame}{二维情形的二次插值}
   \small
@@ -160,6 +220,287 @@ LU分解         & 0.002 & 0.022 & 0.42 & 8.168 & - & - & - & 4.281
 \end{table}
 
 \end{frame}
+
+\section{二维不规则情形}
+
+\begin{frame}{方法一：切割网格}
+
+像第一次大作业一样，把正交网格切割。
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.3\textwidth]{pic/Irregular_CutCell.jpg}
+\end{figure}
+
+图中蓝色的点不能使用标准的 Laplace 离散格式。
+
+\pause\vspace{1em}
+
+因为非标准格式的存在，我们得到方程 $A\mathbf{u}=\mathbf{f}$ 之后，
+如果用加权 Jacobi 迭代，会发现它不收敛。要想解决这个问题，
+必须把规则格点和不规则格点分开处理，
+要用到一种 “块松弛” 的技巧。
+
+\end{frame}
+
+\begin{frame}{方法二：区域映射}
+
+把不规则区域映射到规则区域
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\textwidth]{pic/Irregular_Mapping.jpg}
+\end{figure}
+
+其中
+\begin{equation*}
+	T_x(y) = D(x) + (1-D(x))y,\quad D(x)=\frac{1}{16}\sin(\pi x).
+\end{equation*}
+
+在规则区域里求解，然后再映射回不规则区域，得到 $u$ 的数值解。
+
+\end{frame}
+
+\begin{frame}{方法二：区域映射}
+
+这个方法的难点在于推导 $v$ 与 $g$ 的方程。我们有 $u(x,y)=v(x,T_x^{-1}(y))$，我们记
+\begin{equation*}
+	G(x,y) = T_x^{-1}(y) = \frac{y-D(x)}{1-D(x)}.
+\end{equation*}
+有：
+\begin{equation*}
+	\Delta u = v_{xx}+G_x(x,T_x(y))v_{xy}+G_y(x,T_x(y))v_{yy}+\Delta G(x,T_x(y)) v_y.
+\end{equation*}
+所以在规则区域中，我们要求解这样一个椭圆方程：
+\begin{equation*}
+	v_{xx}+G_x(x,T_x(y))v_{xy}+G_y(x,T_x(y))v_{yy}+\Delta G(x,T_x(y)) v_y = -g
+\end{equation*}
+
+\end{frame}
+
+\begin{frame}{方法三：扭曲网格}
+将整个网格沿着不规则区域的形状扭曲，如下图所示。
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.5\textwidth]{../report/figure/3-1.eps}
+\end{figure}
+
+在宽度为$h=\frac{1}{n}$的扭曲网格中，网格点$G^h(i,j)$的实际坐标为：
+\begin{equation}
+  G^h(i,j)=(ih,\;D(ih)+jh(1-D(ih)))
+\end{equation}
+\begin{equation*}
+D(x)=\frac{1}{16}\sin(\pi x).
+\end{equation*}
+\end{frame}
+
+\begin{frame}{扭曲网格中的Laplace方程}
+\small
+在扭曲网格中，由于左右两个格点不在同一水平线上，因此二阶泰勒展开会存在$xy$交叉项。为将其消去，我们需要一个额外的的点。具体而言，记
+\begin{align*}
+  P_0&=G^h(i,j) & P_1&=G^h(i,j+1) & P_2&=G^h(i,j-1)\\
+  P_3&=G^h(i+1,j) & P_4&=G^h(i-1,j) & P_5&=G^h(i+1,j+1)
+\end{align*}
+
+\pause
+对于$i=0,...,5$，记$P_i=(x_i,y_i)$，将$P_i$处的点值在$P_0$处做二阶Taylor展开：
+\begin{align*}
+  u(P_i)&=u(P_0)+(x_i-x_0)\frac{\partial u}{\partial x}(P_0)+(y_i-y_0)\frac{\partial u}{\partial y}(P_0)
+  +\frac{1}{2}(x_i-x_0)^2\frac{\partial^2 u}{\partial x^2}(P_0) \\
+  & +\frac{1}{2}(y_i-y_0)^2\frac{\partial^2 u}{\partial y^2}(P_0)
+  +(x_i-x_0)(y_i-y_0)\frac{\partial^2 u}{\partial x \partial y}(P_0)+O(h^3).
+\end{align*}
+
+\pause
+列出六元一次方程组，解出系数$A_0,...,A_6$，使得
+\begin{equation*}
+  \sum_{i=0}^6 A_iu(P_i)=-\Delta u(P_0)+O(h)
+\end{equation*}
+
+\pause
+这样列出的方程不够美观。因此我们更换$P_5$的选取，分别选择$G^h(i+1,j-1),G^h(i-1,j+1),G^h(i-1,j-1)$重复上述过程，一共求得四组系数，将各组系数在对应点处相加，再乘以$\frac{1}{4}$，即可得到更加对称的离散化Laplace方程。特别地，在靠近边界的格点处，上述过程会存在越界风险，因此需要视格点位置做特殊处理。
+\end{frame}
+
+\begin{frame}{扭曲网格中的Laplace方程}
+以$n=32,i=4,j=6$为例，通过上述方法求得的各点系数如下图所示，可以看到大体上与规则网格类似。
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.5\textwidth]{../report/figure/3-2.eps}
+\end{figure}
+\end{frame}
+
+\begin{frame}{扭曲网格中的Neumann边界条件}
+\small
+这里仅以$x=0$边界为例，其它边界的想法时类似的。在扭曲网格中，$U_{0,j},U_{1,j},U_{2,j}$这三点之间存在$y$方向的偏移，因此二阶Taylor展式中存在$y,y^2,xy$项，这就需要额外的三个点来消除。与Laplace方程的方法完全类似，选取六个点：
+\begin{align*}
+  P_0&=G^h(0,j) & P_1&=G^h(1,j) & P_2&=G^h(2,j)\\
+  P_3&=G^h(0,j-1) & P_4&=G^h(0,j+1) & P_5&=G^h(1,j+1).
+\end{align*}
+
+\pause
+对于$i=0,...,5$，我们记$P_i=(x_i,y_i)$，将$P_i$处的点值在$P_0$处做二阶Taylor展开：
+\begin{align*}
+  u(P_i)&=u(P_0)+(x_i-x_0)\frac{\partial u}{\partial x}(P_0)+(y_i-y_0)\frac{\partial u}{\partial y}(P_0)
+  +\frac{1}{2}(x_i-x_0)^2\frac{\partial^2 u}{\partial x^2}(P_0) \\
+  & +\frac{1}{2}(y_i-y_0)^2\frac{\partial^2 u}{\partial y^2}(P_0)
+  +(x_i-x_0)(y_i-y_0)\frac{\partial^2 u}{\partial x \partial y}(P_0)+O(h^3).
+\end{align*}
+
+\pause
+列出六元一次方程组，解出系数$A_0,...,A_6$，使得
+\begin{equation*}
+  \sum_{i=0}^6 A_iu(P_i)=-u_x(P_0)+O(h^2)
+\end{equation*}
+
+为使方程更加对称，我们更换$P_5$的选取，取$P_5=G^h(1,j-1)$，重复上述过程，得到另一组系数，将各组系数在对应点处相加，再乘以$\frac{1}{2}$，即可得到更加对称的Neumann边界条件方程。特别地，在靠近上下边界的格点处，上述过程会存在越界风险，因此需要视格点位置做特殊处理。
+\end{frame}
+
+\begin{frame}{扭曲网格中的Neumann边界条件}
+以$n=32,j=6$为例，通过上述方法求得的各点系数如下图所示，可以看到大体上与规则网格类似。
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.5\textwidth]{../report/figure/3-3.eps}
+\end{figure}
+\end{frame}
+
+\begin{frame}{扭曲网格中的线性插值}
+\small
+对于一个细网格上的点，它的位置可能有四种情况：在粗网格点上、在粗网格的某条竖直线上、在粗网格的某条水平线上、不在粗网格线上。对于前两种情况，我们的处理方式与规则网格一样。对于第三种情况，因为扭曲网格的格点与左右两格点并不在同一直线上，因此需要引入第三点做线性插值。
+
+\pause
+我们只介绍不在粗网格线上点如何插值。考虑点$P_0=G^h(2i+1,2j+1)$，选取粗网格上三个点：
+\begin{align*}
+  P_1&=G^{2h}(i,j) & P_1&=G^{2h}(i,j+1) & P_2&=G^{2h}(i+1,j)
+\end{align*}
+
+\pause
+对于$i=0,...,3$，我们记$P_i=(x_i,y_i)$，将$P_i$处的点值在$P_0$处做一阶Taylor展开：
+\begin{align*}
+  u(P_i)&=u(P_0)+(x_i-x_0)\frac{\partial u}{\partial x}(P_0)+(y_i-y_0)\frac{\partial u}{\partial y}(P_0)
+  +\frac{1}{2}(x_i-x_0)^2\frac{\partial^2 u}{\partial x^2}(P_0) + O(h^2).
+\end{align*}
+
+\pause
+列出三元一次方程组，解出系数$A_1,...,A_3$，使得
+\begin{equation*}
+  \sum_{i=1}^3 A_iu(P_i)=u(P_0)+O(h^2)
+\end{equation*}
+
+为了使插值系数更加对称，我们重新选取$P_1,P_2,P_3$，每次在$P_0$周围的四个粗网格点上取三个点做上述过程，取遍所有可能，一共四次。将每次得到的系数在各点处相加并乘$\frac{1}{4}$，即可得到更加对称的线性插值方程。
+\end{frame}
+
+\begin{frame}{扭曲网格中的线性插值}
+以$n=32,i=5,j=7$为例，各点插值系数如下图所示，与规则网格的插值系数只相差大约$0.001$.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.5\textwidth]{../report/figure/3-5.eps}
+\end{figure}
+
+\pause
+在最早先版本的代码中，我们实现了不规则网格的线性插值，当时我们并没有发现插值系数与规则网格如此相近。意识到这个情况后，在最终版本的代码中，出于计算性能考虑，我们选择直接使用规则网格的线性插值作为近似。
+
+\pause
+\vspace{1em}
+二次插值思路类似：Taylor展开后求系数、对称化，不再赘述。
+\end{frame}
+
+\begin{frame}{扭曲网格的效果}
+\small
+考虑由精确解$u(x,y)=e^{\sin x+y}$导出的Dirichlet边值问题，用$n=16,32,64,128,256,512,1024$的网格测试，使用V-Cycle，限制算子选择Full Operator，插值算子选择线性插值。当$n=16,32,64,128$时，误差分布如下图所示。
+\begin{figure}[H]
+  \centering
+  \tiny
+  \begin{minipage}[t]{0.24\linewidth}
+      \centering
+      \includegraphics[width=0.95\linewidth]{../report/figure/3-1-1.eps}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{../report/figure/3-1-2.eps}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{../report/figure/3-1-3.eps}
+  \end{minipage}
+  \begin{minipage}[t]{0.24\linewidth}
+    \centering
+    \includegraphics[width=0.95\linewidth]{../report/figure/3-1-4.eps}
+  \end{minipage}
+\end{figure}
+
+可以看到，在Dirichlet条件下，格点越靠近边界，最终的计算误差越小。将数值解与真实解的误差用范数估计，并根据$n=512$增加到$n=1024$时误差减小的倍数，估计各范数下的收敛阶，结果如下表。
+
+\begin{table}
+  \centering
+  \tiny
+  \begin{tabular}{c|ccccccc|c}
+  \textbf{$n$}       & 64                   & 128                  & 256                  & 512                  & 1024                  & 收敛阶 \\ \hline
+  $||\cdot||_1$      & $3.35\times 10^{-6}$ & $8.72\times 10^{-7}$ & $2.40\times 10^{-7}$ & $5.42\times 10^{-8}$ & $1.41\times 10^{-8}$ & $1.944$\\
+  $||\cdot||_2$      & $4.31\times 10^{-6}$ & $1.11\times 10^{-6}$ & $2.99\times 10^{-7}$ & $6.86\times 10^{-8}$ & $1.77\times 10^{-8}$ & $1.952$\\
+  $||\cdot||_\infty$ & $8.77\times 10^{-6}$ & $2.23\times 10^{-6}$ & $5.96\times 10^{-7}$ & $1.38\times 10^{-7}$ & $3.54\times 10^{-8}$ & $1.958$
+  \end{tabular}
+\end{table}
+
+大致呈二阶收敛。
+\end{frame}
+
+\section{程序设计}
+
+\begin{frame}{参数管理}
+\small
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{pic/parm.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}{用户接口}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.6\textwidth]{pic/userPlug.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}{求解器类}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{pic/solver.png}
+\end{figure}
+\end{frame}
+
+\begin{frame}{抽象操作类}
+
+这是一个抽象操作类，它支持一个括号运算。
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{pic/operator.png}
+\end{figure}
+
+\pause
+它的派生类可以是插值算子，也可以是限制算子。
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth]{pic/suboperator.png}
+\end{figure}
+
+\end{frame}
+
+\begin{frame}{稀疏矩阵}
+  一个好的多重网格求解器应该具有$O(N)$的复杂度，其中$N$是格点的数量。如果使用稠密矩阵，那么$A^h$矩阵的存储本身就有$\Theta(N^2)$的复杂度，是非常愚蠢的。
+
+  \vspace{1em}
+  \pause
+  本次作业原则上禁止使用eigen的稀疏矩阵，需要自己实现。稀疏矩阵就是以$(i,j,c)$的方式存储矩阵元素，表示$A_{ij}=c$，三元组的数量是$O(N)$的。
+
+  \vspace{1em}
+  \pause
+  我们用了行压缩的存储方式，具体而言，我们将元素按行、列排好序，只存储$(j,c)$，然后用一个row\_index来记录每行的第一个元素下标。矩阵乘向量的只需做元素数量次乘法，是$O(N)$的。
+\end{frame}
+
+\section{二维规则区域多重网格的理论分析}
 
 \begin{frame}{理论分析——基本表述}
   \small
@@ -411,254 +752,10 @@ LU分解         & 0.002 & 0.022 & 0.42 & 8.168 & - & - & - & 4.281
   \pause
   \begin{theorem}
     \small
-    对于二维齐次Dirichlet边值问题，只需要一次FMG-Cycle迭代，就能够达到$O(h^2)$精度，计算耗时$O(n\log n)$，$n$是格点数。
+    对于二维齐次Dirichlet边值问题，只需要一次FMG-Cycle迭代，就能够达到$O(h^2)$精度，计算耗时$O(N)$，$N$是格点数。
   \end{theorem}
 \end{frame}
 
-
-\section{二维不规则情形}
-
-\begin{frame}{扭曲网格}
-将整个网格沿着不规则区域的形状扭曲，如下图所示。
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.5\textwidth]{../report/figure/3-1.eps}
-\end{figure}
-
-在宽度为$h=\frac{1}{n}$的扭曲网格中，网格点$G^h(i,j)$的实际坐标为：
-\begin{equation}
-  G^h(i,j)=(ih,\;D(ih)+jh(1-D(ih)))
-\end{equation}
-\begin{equation*}
-D(x)=\frac{1}{16}\sin(\pi x).
-\end{equation*}
-\end{frame}
-
-\begin{frame}{扭曲网格中的Laplace方程}
-\small
-在扭曲网格中，由于左右两个格点不在同一水平线上，因此二阶泰勒展开会存在$xy$交叉项。为将其消去，我们需要一个额外的的点。具体而言，记
-\begin{align*}
-  P_0&=G^h(i,j) & P_1&=G^h(i,j+1) & P_2&=G^h(i,j-1)\\
-  P_3&=G^h(i+1,j) & P_4&=G^h(i-1,j) & P_5&=G^h(i+1,j+1)
-\end{align*}
-
-\pause
-对于$i=0,...,5$，记$P_i=(x_i,y_i)$，将$P_i$处的点值在$P_0$处做二阶Taylor展开：
-\begin{align*}
-  u(P_i)&=u(P_0)+(x_i-x_0)\frac{\partial u}{\partial x}(P_0)+(y_i-y_0)\frac{\partial u}{\partial y}(P_0)
-  +\frac{1}{2}(x_i-x_0)^2\frac{\partial^2 u}{\partial x^2}(P_0) \\
-  & +\frac{1}{2}(y_i-y_0)^2\frac{\partial^2 u}{\partial y^2}(P_0)
-  +(x_i-x_0)(y_i-y_0)\frac{\partial^2 u}{\partial x \partial y}(P_0)+O(h^3).
-\end{align*}
-
-\pause
-列出六元一次方程组，解出系数$A_0,...,A_6$，使得
-\begin{equation*}
-  \sum_{i=0}^6 A_iu(P_i)=-\Delta u(P_0)+O(h)
-\end{equation*}
-
-\pause
-这样列出的方程不够美观。因此我们更换$P_5$的选取，分别选择$G^h(i+1,j-1),G^h(i-1,j+1),G^h(i-1,j-1)$重复上述过程，一共求得四组系数，将各组系数在对应点处相加，再乘以$\frac{1}{4}$，即可得到更加对称的离散化Laplace方程。特别地，在靠近边界的格点处，上述过程会存在越界风险，因此需要视格点位置做特殊处理。
-\end{frame}
-
-\begin{frame}{扭曲网格中的Laplace方程}
-以$n=32,i=4,j=6$为例，通过上述方法求得的各点系数如下图所示，可以看到大体上与规则网格类似。
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.5\textwidth]{../report/figure/3-2.eps}
-\end{figure}
-\end{frame}
-
-\begin{frame}{扭曲网格中的Neumann边界条件}
-\small
-这里仅以$x=0$边界为例，其它边界的想法时类似的。在扭曲网格中，$U_{0,j},U_{1,j},U_{2,j}$这三点之间存在$y$方向的偏移，因此二阶Taylor展式中存在$y,y^2,xy$项，这就需要额外的三个点来消除。与Laplace方程的方法完全类似，选取六个点：
-\begin{align*}
-  P_0&=G^h(0,j) & P_1&=G^h(1,j) & P_2&=G^h(2,j)\\
-  P_3&=G^h(0,j-1) & P_4&=G^h(0,j+1) & P_5&=G^h(1,j+1).
-\end{align*}
-
-\pause
-对于$i=0,...,5$，我们记$P_i=(x_i,y_i)$，将$P_i$处的点值在$P_0$处做二阶Taylor展开：
-\begin{align*}
-  u(P_i)&=u(P_0)+(x_i-x_0)\frac{\partial u}{\partial x}(P_0)+(y_i-y_0)\frac{\partial u}{\partial y}(P_0)
-  +\frac{1}{2}(x_i-x_0)^2\frac{\partial^2 u}{\partial x^2}(P_0) \\
-  & +\frac{1}{2}(y_i-y_0)^2\frac{\partial^2 u}{\partial y^2}(P_0)
-  +(x_i-x_0)(y_i-y_0)\frac{\partial^2 u}{\partial x \partial y}(P_0)+O(h^3).
-\end{align*}
-
-\pause
-列出六元一次方程组，解出系数$A_0,...,A_6$，使得
-\begin{equation*}
-  \sum_{i=0}^6 A_iu(P_i)=-u_x(P_0)+O(h^2)
-\end{equation*}
-
-为使方程更加对称，我们更换$P_5$的选取，取$P_5=G^h(1,j-1)$，重复上述过程，得到另一组系数，将各组系数在对应点处相加，再乘以$\frac{1}{2}$，即可得到更加对称的Neumann边界条件方程。特别地，在靠近上下边界的格点处，上述过程会存在越界风险，因此需要视格点位置做特殊处理。
-\end{frame}
-
-\begin{frame}{扭曲网格中的Neumann边界条件}
-以$n=32,j=6$为例，通过上述方法求得的各点系数如下图所示，可以看到大体上与规则网格类似。
-
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.5\textwidth]{../report/figure/3-3.eps}
-\end{figure}
-\end{frame}
-
-\begin{frame}{扭曲网格中的线性插值}
-\small
-对于一个细网格上的点，它的位置可能有四种情况：在粗网格点上、在粗网格的某条竖直线上、在粗网格的某条水平线上、不在粗网格线上。对于前两种情况，我们的处理方式与规则网格一样。对于第三种情况，因为扭曲网格的格点与左右两格点并不在同一直线上，因此需要引入第三点做线性插值。
-
-\pause
-我们只介绍不在粗网格线上点如何插值。考虑点$P_0=G^h(2i+1,2j+1)$，选取粗网格上三个点：
-\begin{align*}
-  P_1&=G^{2h}(i,j) & P_1&=G^{2h}(i,j+1) & P_2&=G^{2h}(i+1,j)
-\end{align*}
-
-\pause
-对于$i=0,...,3$，我们记$P_i=(x_i,y_i)$，将$P_i$处的点值在$P_0$处做一阶Taylor展开：
-\begin{align*}
-  u(P_i)&=u(P_0)+(x_i-x_0)\frac{\partial u}{\partial x}(P_0)+(y_i-y_0)\frac{\partial u}{\partial y}(P_0)
-  +\frac{1}{2}(x_i-x_0)^2\frac{\partial^2 u}{\partial x^2}(P_0) + O(h^2).
-\end{align*}
-
-\pause
-列出三元一次方程组，解出系数$A_1,...,A_3$，使得
-\begin{equation*}
-  \sum_{i=1}^3 A_iu(P_i)=u(P_0)+O(h^2)
-\end{equation*}
-
-为了使插值系数更加对称，我们重新选取$P_1,P_2,P_3$，每次在$P_0$周围的四个粗网格点上取三个点做上述过程，取遍所有可能，一共四次。将每次得到的系数在各点处相加并乘$\frac{1}{4}$，即可得到更加对称的线性插值方程。
-\end{frame}
-
-\begin{frame}{扭曲网格中的线性插值}
-以$n=32,i=5,j=7$为例，各点插值系数如下图所示，与规则网格的插值系数只相差大约$0.001$.
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.5\textwidth]{../report/figure/3-5.eps}
-\end{figure}
-
-\pause
-在最早先版本的代码中，我们实现了不规则网格的线性插值，当时我们并没有发现插值系数与规则网格如此相近。意识到这个情况后，在最终版本的代码中，出于计算性能考虑，我们选择直接使用规则网格的线性插值作为近似。
-
-\pause
-\vspace{1em}
-二次插值思路类似：Taylor展开后求系数、对称化，不再赘述。
-\end{frame}
-
-\begin{frame}{扭曲网格的效果}
-\small
-考虑由精确解$u(x,y)=e^{\sin x+y}$导出的Dirichlet边值问题，用$n=16,32,64,128,256,512,1024$的网格测试，使用V-Cycle，限制算子选择Full Operator，插值算子选择线性插值。当$n=16,32,64,128$时，误差分布如下图所示。
-\begin{figure}[H]
-  \centering
-  \tiny
-  \begin{minipage}[t]{0.24\linewidth}
-      \centering
-      \includegraphics[width=0.95\linewidth]{../report/figure/3-1-1.eps}
-  \end{minipage}
-  \begin{minipage}[t]{0.24\linewidth}
-    \centering
-    \includegraphics[width=0.95\linewidth]{../report/figure/3-1-2.eps}
-  \end{minipage}
-  \begin{minipage}[t]{0.24\linewidth}
-    \centering
-    \includegraphics[width=0.95\linewidth]{../report/figure/3-1-3.eps}
-  \end{minipage}
-  \begin{minipage}[t]{0.24\linewidth}
-    \centering
-    \includegraphics[width=0.95\linewidth]{../report/figure/3-1-4.eps}
-  \end{minipage}
-\end{figure}
-
-可以看到，在Dirichlet条件下，格点越靠近边界，最终的计算误差越小。将数值解与真实解的误差用范数估计，并根据$n=512$增加到$n=1024$时误差减小的倍数，估计各范数下的收敛阶，结果如下表。
-
-\begin{table}
-  \centering
-  \tiny
-  \begin{tabular}{c|ccccccc|c}
-  \textbf{$n$}       & 64                   & 128                  & 256                  & 512                  & 1024                  & 收敛阶 \\ \hline
-  $||\cdot||_1$      & $3.35\times 10^{-6}$ & $8.72\times 10^{-7}$ & $2.40\times 10^{-7}$ & $5.42\times 10^{-8}$ & $1.41\times 10^{-8}$ & $1.944$\\
-  $||\cdot||_2$      & $4.31\times 10^{-6}$ & $1.11\times 10^{-6}$ & $2.99\times 10^{-7}$ & $6.86\times 10^{-8}$ & $1.77\times 10^{-8}$ & $1.952$\\
-  $||\cdot||_\infty$ & $8.77\times 10^{-6}$ & $2.23\times 10^{-6}$ & $5.96\times 10^{-7}$ & $1.38\times 10^{-7}$ & $3.54\times 10^{-8}$ & $1.958$
-  \end{tabular}
-\end{table}
-
-大致呈二阶收敛。
-\end{frame}
-
-\section{程序设计}
-
-\begin{frame}{参数管理}
-\small
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.88\textwidth]{pic/parm.png}
-\end{figure}
-
-各参数说明如下：
-
-\begin{enumerate}[(1)]
-\item Condition Type是条件的类型，您可以输入Dirichlet，Neumann或mixed；
-\item Dimension是维数，您可以输入1或2
-\item Reigeon Type是区域的类型，您可以输入Regular或Irregular；
-\item Grid Size是网格的大小，您需要输入一个正整数，并且必须为2的正整数次幂；
-\item f用于描述$-\Delta u$，g用于描述边值条件；
-\item Cycle Type：Cycle的类型。您可以输入V或FMG；
-\item Restriction：限制算子的类型。您可以输入injection或full operator；
-\item Prolongation：插值算子的类型。您可以输入linear或quadradic；
-\item Max Iter：最大迭代次数。您可以输入一个正整数；
-\item eps：求解精度需求。您可以输入一个正浮点数；
-\item Check Error：若您需要验证误差，请设为true，否则设为false；
-\item u：真实解。如果您需要验证误差，您必须提供真实解的表达式。
-\end{enumerate}
-\end{frame}
-
-\begin{frame}{维数的抽象}
-  一个根求解器rootSolver，实现V-Cycle、FMG-Cycle，使用的限制、插值算子是经过维数抽象后的对象，而$A^h$由子类在构造时生成。
-
-  \vspace{1em}
-  两个子类Solver1D与Solver2D继承根求解器，子类只负责实现$A^h$的生成。
-
-  \vspace{1em}
-  限制、插值算子内部根据dim判断是一维还是二维算子。
-
-  \vspace{1em}
-  代码的大头是$A^h$的生成和各种插值算子，但是运行时间的大头是Jacobi迭代。$90\%$的时间花在不到$5\%$的代码中。
-\end{frame}
-
-\begin{frame}{表达式解析}
-  为了方便用户能自定义方程而不需要重新编译，我们允许用户将方程以字符串的形式输入到json文件中，求解器通过表达式解析器读取。
-
-  \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{pic/expr.png}
-  \end{figure}
-
-  上面是我们实现的表达式解析器的用法。其实用表达式解析器的效率远远低于把函数写在代码里编译，但因为BVP求解器中函数调用不是时间复杂度的主要部分，所以无所谓。非常不建议在IVP求解器中用这种手段。
-\end{frame}
-
-\begin{frame}{稀疏矩阵}
-  一个好的多重网格求解器应该具有$O(n\log n)$的复杂度，其中$n$是格点的数量。如果使用稠密矩阵，那么$A^h$矩阵的存储本身就有$\Theta(n^2)$的复杂度，是非常愚蠢的。
-
-  \vspace{1em}
-  \pause
-  可以使用eigen的稀疏矩阵（zzy同学第一次大作业就用了）。或者自己实现。稀疏矩阵就是以$(i,j,c)$的方式存储矩阵元素，表示$A_{ij}=c$，三元组的数量是$O(n)$的。
-
-  \vspace{1em}
-  \pause
-  我们用了行压缩的存储方式，具体而言，我们将元素按行、列排好序，只存储$(j,c)$，然后用一个row\_index来记录每行的第一个元素下标。矩阵乘向量的只需做元素数量次乘法，是$O(n)$的。
-\end{frame}
-
-\begin{frame}{二次封装}
-  考虑到求解器的设计比较复杂，对于用户并不友好，我们进行了二次封装。二次封装实现了一个类BVP，这样主程序就非常简洁：
-
-  \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{pic/user.png}
-  \end{figure}
-
-\end{frame}
 
 \section{代数多重网格}
 
@@ -790,7 +887,7 @@ D(x)=\frac{1}{16}\sin(\pi x).
 \begin{frame}
     \frametitle{谢谢}
     \centering
-    \Large Thaks for Your Attention!
+    \Large Thaks for your attention!
 \end{frame}
 
 \end{document}
