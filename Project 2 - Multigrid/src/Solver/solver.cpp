@@ -31,12 +31,12 @@ template <int Dim>
 ColVector Solver<Dim>::VC(const int &d, const int &n, ColVector v, const ColVector &f){
     const SparseMatrix & A = Ah[d];
     for(int i = 0; i < VC_V1; i++)
-        v = A.wJacobi(v, f, VC_W);
+        v = A.wJacobi(v, f, VC_W<Dim>::value);
     if(n > 2){
         v = v + prolongation( VC(d+1, n/2, zeroGridCol(n/2,Dim), restriction(f-A*v)) );
     }
     for(int i = 0; i < VC_V2; i++)
-        v = A.wJacobi(v, f, VC_W);
+        v = A.wJacobi(v, f, VC_W<Dim>::value);
     return v;
 }
 
