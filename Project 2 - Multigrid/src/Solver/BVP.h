@@ -8,6 +8,7 @@
 
 #include <jsoncpp/json/json.h>
 #include <string>
+#include <memory>
 
 template <int Dim>
 class BVP{
@@ -15,9 +16,8 @@ private:
     Json::Value problem;
     Solver<Dim> *solver;
 
-    FuncExpr<Dim> f, feg;
-    Function<Dim> *g;
-    BFuncExpr<Dim> _g;
+    std::shared_ptr<Function<Dim>> g;
+    FuncExpr<Dim> f;
     BType bonDtil;
 
 public:

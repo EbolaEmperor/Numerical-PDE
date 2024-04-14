@@ -191,16 +191,17 @@ void BVP<Dim>::checkParse(){
 template <>
 void BVP<1>::setFunctions(){
     f.setExpr(problem["f"].asString());
+    auto derg = std::make_shared<BFuncExpr<1>>();
     if(problem["Condition Type"].asString() == "mixed"){
-        _g.setExpr("x=0", problem["g"]["x=0"][0].asString());
-        _g.setExpr("x=1", problem["g"]["x=1"][0].asString());
+        derg->setExpr("x=0", problem["g"]["x=0"][0].asString());
+        derg->setExpr("x=1", problem["g"]["x=1"][0].asString());
         bonDtil.setBondary("x=0", problem["g"]["x=0"][1].asString());
         bonDtil.setBondary("x=1", problem["g"]["x=1"][1].asString());
     } else {
-        _g.setExpr("x=0", problem["g"]["x=0"].asString());
-        _g.setExpr("x=1", problem["g"]["x=1"].asString());
+        derg->setExpr("x=0", problem["g"]["x=0"].asString());
+        derg->setExpr("x=1", problem["g"]["x=1"].asString());
     }
-    g = &_g;
+    g = std::make_shared<BFuncExpr<1>>(derg);
 }
 
 template <>
@@ -210,25 +211,27 @@ void BVP<2>::setFunctions(){
         f.setDeltaExpr(problem["Delta f"].asString());
     }
     if( !problem["g"].isObject() ){
-        feg.setExpr(problem["g"].asString());
-        g = &feg;
+        auto derg = std::make_shared<FuncExpr<2>>();
+        derg->setExpr(problem["g"].asString());
+        g = std::make_shared<FuncExpr<2>>(derg);
     } else {
+        auto derg = std::make_shared<BFuncExpr<2>>();
         if(problem["Condition Type"].asString() == "mixed"){
-            _g.setExpr("x=0", problem["g"]["x=0"][0].asString());
-            _g.setExpr("x=1", problem["g"]["x=1"][0].asString());
-            _g.setExpr("Down Bondary", problem["g"]["Down Bondary"][0].asString());
-            _g.setExpr("y=1", problem["g"]["y=1"][0].asString());
+            derg->setExpr("x=0", problem["g"]["x=0"][0].asString());
+            derg->setExpr("x=1", problem["g"]["x=1"][0].asString());
+            derg->setExpr("Down Bondary", problem["g"]["Down Bondary"][0].asString());
+            derg->setExpr("y=1", problem["g"]["y=1"][0].asString());
             bonDtil.setBondary("x=0", problem["g"]["x=0"][1].asString());
             bonDtil.setBondary("x=1", problem["g"]["x=1"][1].asString());
             bonDtil.setBondary("Down Bondary", problem["g"]["Down Bondary"][1].asString());
             bonDtil.setBondary("y=1", problem["g"]["y=1"][1].asString());
         } else {
-            _g.setExpr("x=0", problem["g"]["x=0"].asString());
-            _g.setExpr("x=1", problem["g"]["x=1"].asString());
-            _g.setExpr("Down Bondary", problem["g"]["Down Bondary"].asString());
-            _g.setExpr("y=1", problem["g"]["y=1"].asString());
+            derg->setExpr("x=0", problem["g"]["x=0"].asString());
+            derg->setExpr("x=1", problem["g"]["x=1"].asString());
+            derg->setExpr("Down Bondary", problem["g"]["Down Bondary"].asString());
+            derg->setExpr("y=1", problem["g"]["y=1"].asString());
         }
-        g = &_g;
+        g = std::make_shared<BFuncExpr<2>>(derg);
     }
 }
 

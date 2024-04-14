@@ -11,6 +11,8 @@ private:
 
 public:
     FuncExpr();
+    FuncExpr(const FuncExpr<Dim>& rhs): e(rhs.e), Delta_e(rhs.e) {}
+    FuncExpr(std::shared_ptr<FuncExpr<Dim>> prhs): FuncExpr(*prhs) {}
 
     void setExpr(const std::string &expr){
         e.setExpr(expr);
