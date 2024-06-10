@@ -1,0 +1,10 @@
+{
+    "Problem": "Hamiltonian",
+    "Method": "Stormer-Verlet",
+    "Init": [0.4, 0, 0, 2],
+    "T": 120,
+    "Grid Size": 4800,
+    "Richardson Error Estimate": false,
+    "Output": true,
+    "Dense Output": false
+}
