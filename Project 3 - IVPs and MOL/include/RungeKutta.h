@@ -11,22 +11,6 @@ protected:
 static void registerClassicalRK(void)__attribute__((constructor));
 
 
-class SymplecticEulerSolver : public TimeIntegrator_ConstStep{
-protected:
-    ColVector oneStepSolve(TimeFunction &f, const ColVector &x0, const ColVector &f0, const double &t0, const double &step);
-    void solve(TimeFunction &f, const ColVector &x0, const double &T, const int &gridSize);
-};
-static void registerSymplecticEuler(void)__attribute__((constructor));
-
-
-class StormerVerletSolver : public TimeIntegrator_ConstStep{
-protected:
-    ColVector oneStepSolve(TimeFunction &f, const ColVector &x0, const ColVector &f0, const double &t0, const double &step);
-    void solve(TimeFunction &f, const ColVector &x0, const double &T, const int &gridSize);
-};
-static void registerStormerVerlet(void)__attribute__((constructor));
-
-
 class ImplicitRKSolver : public TimeIntegrator_ConstStep{
 protected:
     virtual ColVector oneStepSolve(TimeFunction &f, const ColVector &U0, const double &t0, const double &step) = 0;

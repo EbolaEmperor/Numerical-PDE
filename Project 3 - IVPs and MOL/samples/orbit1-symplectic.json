@@ -1,0 +1,13 @@
+{
+    "Problem": "Restricted 3-Body Problem",
+    "Method": "Stormer-Verlet",
+    "Mass Ratio": 0.012277471,
+    "Init": [0.994, 0, 0, 0, -2.00158510637908252240537862224, 0],
+    "T": 17.0652165601579625588917206249,
+    "Periodic": 1,
+    "Grid Size": 1000000,
+    "Richardson Error Estimate": false,
+    "Output": false,
+    "Dense Output": false,
+    "Dense-Discrete Output": false
+}

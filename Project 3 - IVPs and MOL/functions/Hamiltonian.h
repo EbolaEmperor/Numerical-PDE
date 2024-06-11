@@ -10,6 +10,16 @@ public:
         res(2) = - x(0) / pow(r, 1.5) - 0.015 * x(0) / pow(r, 2.5);
         res(3) = - x(1) / pow(r, 1.5) - 0.015 * x(1) / pow(r, 2.5);
     }
+    ColVector dp(const ColVector &p, const ColVector &q) const{
+        return q;
+    }
+    ColVector dq(const ColVector &p, const ColVector &q) const{
+        const double r = p(0)*p(0) + p(1)*p(1);
+        ColVector res(2);
+        res(0) = - p(0) / pow(r, 1.5) - 0.015 * p(0) / pow(r, 2.5);
+        res(1) = - p(1) / pow(r, 1.5) - 0.015 * p(1) / pow(r, 2.5);
+        return res;
+    }
 };
 
 static void registerHamiltonian(void)__attribute__((constructor));

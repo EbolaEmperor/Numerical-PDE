@@ -16,6 +16,8 @@ public:
         compute(x, t, res);
         return res;
     }
+    virtual ColVector dp(const ColVector &p, const ColVector &q) const {return ColVector();}
+    virtual ColVector dq(const ColVector &p, const ColVector &q) const {return ColVector();}
     virtual ColVector solve(const Matrix &A, const ColVector &c, const ColVector &U0, const double &t0, const double &k) const {return ColVector();}
     bool isLinear() const{return __isLinear;}
     virtual void compute(const ColVector &x, const double &t, ColVector &res) const = 0;

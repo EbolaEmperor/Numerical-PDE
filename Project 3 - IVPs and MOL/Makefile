@@ -10,8 +10,8 @@ story: solve
 run: solve
 	./solve tests/*.json
 
-solve: solve.o IVP.o LMMs.o RungeKutta.o matrix.o NonLinearSolver.o Polynomial.o functionFactory.o
-	g++ solve.o IVP.o LMMs.o RungeKutta.o matrix.o NonLinearSolver.o Polynomial.o functionFactory.o $(LIB) -o solve $(OPTIMIZE)
+solve: solve.o IVP.o LMMs.o RungeKutta.o SymplecticMethods.o matrix.o NonLinearSolver.o Polynomial.o functionFactory.o
+	g++ solve.o IVP.o LMMs.o RungeKutta.o SymplecticMethods.o matrix.o NonLinearSolver.o Polynomial.o functionFactory.o $(LIB) -o solve $(OPTIMIZE)
 
 heat: MOL/heat.o IVP.o LMMs.o RungeKutta.o matrix.o NonLinearSolver.o Polynomial.o
 	g++ MOL/heat.o IVP.o LMMs.o RungeKutta.o matrix.o NonLinearSolver.o Polynomial.o $(LIB) -o MOL/heat $(OPTIMIZE)
@@ -42,6 +42,9 @@ NonLinearSolver.o: src/NonLinearSolver.cpp include/NonLinearSolver.h src/matrix.
 
 RungeKutta.o: src/RungeKutta.cpp include/RungeKutta.h src/IVP.cpp include/IVP.h src/NonLinearSolver.cpp include/NonLinearSolver.h src/Polynomial.cpp include/Polynomial.h
 	g++ -c src/RungeKutta.cpp $(INC) $(OPTIMIZE)
+
+SymplecticMethods.o: src/SymplecticMethods.cpp include/SymplecticMethods.h src/IVP.cpp include/IVP.h
+	g++ -c src/SymplecticMethods.cpp $(INC) $(OPTIMIZE)
 
 Polynomial.o: src/Polynomial.cpp include/Polynomial.h src/matrix.cpp include/matrix.h
 	g++ -c src/Polynomial.cpp $(INC) $(OPTIMIZE)
