@@ -1,0 +1,12 @@
+{
+    "Problem": "Pendulum",
+    "Method": "Gauss-Legendre",
+    "Order": 1,
+    "Grid Size" : 400,
+    "Init": [0.785398163, 0],
+    "T": 100,
+    "Richardson Error Estimate": false,
+    "Output": true,
+    "Dense Output": false,
+    "Dense-Discrete Output": false
+}

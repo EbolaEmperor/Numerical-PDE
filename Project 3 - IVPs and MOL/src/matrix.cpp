@@ -44,8 +44,12 @@ bool Matrix::empty() const{
 }
 
 Matrix & Matrix::operator = (const Matrix & rhs){
-    Matrix copy(rhs);
-    std::swap(*this, copy);
+    if(n == rhs.n && m == rhs.m){
+        std::memcpy(a, rhs.a, sizeof(double) * (n*m));
+    } else {
+        Matrix copy(rhs);
+        std::swap(*this, copy);
+    }
     return *this;
 }
 Matrix & Matrix::operator = (Matrix && rhs){

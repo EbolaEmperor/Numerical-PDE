@@ -7,7 +7,7 @@ class LMMSolver : public TimeIntegrator_ConstStep{
 protected:
     int s, p;
     std::string method;
-    virtual ColVector oneStepSolve(TimeFunction &f, const int &i) = 0;
+    virtual void oneStepSolve(TimeFunction &f, const int &i, ColVector &res) = 0;
     void solve(TimeFunction &f, const ColVector &x0, const double &T, const int &gridSize);
 };
 
@@ -15,7 +15,7 @@ class AdamsBashforthSolver : public LMMSolver{
 private:
     ColVector beta;
 protected:
-    ColVector oneStepSolve(TimeFunction &f, const int &i);
+    void oneStepSolve(TimeFunction &f, const int &i, ColVector &nxtsol);
 public:
     AdamsBashforthSolver(const int &order);
 };
@@ -26,7 +26,7 @@ class AdamsMoultonSolver : public LMMSolver{
 private:
     ColVector beta;
 protected:
-    ColVector oneStepSolve(TimeFunction &f, const int &i);
+    void oneStepSolve(TimeFunction &f, const int &i, ColVector &nxtsol);
 public:
     AdamsMoultonSolver(const int &order);
 };
@@ -38,7 +38,7 @@ private:
     ColVector alpha;
     double beta;
 protected:
-    ColVector oneStepSolve(TimeFunction &f, const int &i);
+    void oneStepSolve(TimeFunction &f, const int &i, ColVector &nxtsol);
 public:
     BDFSolver(const int &order);
 };

@@ -8,11 +8,9 @@ public:
     AliContestFunc(const double &arg){
         omega = arg;
     }
-    ColVector operator () (const ColVector &x, const double &t) const{
-        ColVector res(2);
+    void compute (const ColVector &x, const double &t, ColVector &res) const{
         res(0) = x(1);
         res(1) = -(1 + 0.01 * cos(omega*t)) * x(0);
-        return res;
     }
 };
 

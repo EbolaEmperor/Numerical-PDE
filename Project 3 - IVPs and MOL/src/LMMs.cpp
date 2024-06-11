@@ -7,20 +7,22 @@
 void LMMSolver::solve(TimeFunction &f, const ColVector &x0, const double &T, const int &n){
     maxTime = T;
     timeStep = maxTime/n;
-    sol.push_back(x0);
-    dsol.push_back(f(sol[0],0));
+    sol.resize(n + 1, x0.size());
+    dsol.resize(n + 1, x0.size());
+    sol[0] = x0;
+    f.compute(sol[0], 0, dsol[0]);
     if(s >= 2){
         TimeIntegrator* initSolver = new RadauIIARKSolver(p/2+1);
         initSolver->solve( f, x0, (s-1)*timeStep, s-1);
         for(int i = 1; i < s; i++){
-            sol.push_back(initSolver->at(i*timeStep));
-            dsol.push_back(f(sol[i], i*timeStep));
+            sol[i] = initSolver->at(i*timeStep);
+            f.compute(sol[i], i*timeStep, dsol[i]);
         }
         delete initSolver;
     }
     for(int i = s; i <= n; i++){
-        sol.push_back(oneStepSolve(f, i));
-        dsol.push_back(f(sol[i], i*timeStep));
+        oneStepSolve(f, i, sol[i]);
+        f.compute(sol[i], i*timeStep, dsol[i]);
     }
 }
 
@@ -49,11 +51,10 @@ AdamsBashforthSolver::AdamsBashforthSolver(const int &_p){
     beta = coef.solve(rhs);
 }
 
-ColVector AdamsBashforthSolver::oneStepSolve(TimeFunction &f, const int &i){
-    ColVector nxtsol = sol[i-1];
+void AdamsBashforthSolver::oneStepSolve(TimeFunction &f, const int &i, ColVector &nxtsol){
+    nxtsol = sol[i];
     for(int j = 0; j < s; j++)
         nxtsol = nxtsol + timeStep * beta(j) * dsol[i-s+j];
-    return nxtsol;
 }
 
 
@@ -99,11 +100,12 @@ AdamsMoultonSolver::AdamsMoultonSolver(const int &_p){
     beta = coef.solve(rhs);
 }
 
-ColVector AdamsMoultonSolver::oneStepSolve(TimeFunction &f, const int &i){
+void AdamsMoultonSolver::oneStepSolve(TimeFunction &f, const int &i, ColVector &nxtsol){
     ColVector C = sol[i-1];
     for(int j = 0; j < s; j++)
         C = C + timeStep * beta(j) * dsol[i-s+j];
-    ColVector nxtsol = C + timeStep * beta(s) * f(sol[i-1], i*timeStep), cursol;
+    nxtsol = C + timeStep * beta(s) * f(sol[i-1], i*timeStep);
+    ColVector cursol;
     int times = 0;
     do{
         times++;
@@ -120,7 +122,6 @@ ColVector AdamsMoultonSolver::oneStepSolve(TimeFunction &f, const int &i){
         Function_ImplicitLMM flmm(f, timeStep * beta(s), i * timeStep, C);
         nxtsol = nlsolver.solve(flmm, sol[i-1]);
     }
-    return nxtsol;
 }
 
 //------------------------Backward Differential Formula-----------------------------
@@ -153,11 +154,12 @@ BDFSolver::BDFSolver(const int &_p){
     alpha = ab.getSubmatrix(1,p,0,0);
 }
 
-ColVector BDFSolver::oneStepSolve(TimeFunction &f, const int &i){
+void BDFSolver::oneStepSolve(TimeFunction &f, const int &i, ColVector &nxtsol){
     ColVector C(sol[0].size());
     for(int j = 0; j < s; j++)
         C = C - alpha(j) * sol[i-s+j];
-    ColVector nxtsol = C + timeStep * beta * f(sol[i-1], i*timeStep), cursol;
+    nxtsol = C + timeStep * beta * f(sol[i-1], i*timeStep);
+    ColVector cursol;
     int times = 0;
     do{
         times++;
@@ -174,5 +176,4 @@ ColVector BDFSolver::oneStepSolve(TimeFunction &f, const int &i){
         Function_ImplicitLMM flmm(f, timeStep * beta, i * timeStep, C);
         nxtsol = nlsolver.solve(flmm, sol[i-1]);
     }
-    return nxtsol;
 }

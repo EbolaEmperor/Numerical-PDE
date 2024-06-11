@@ -11,9 +11,14 @@ protected:
     bool __isLinear;
 public:
     TimeFunction(): __isLinear(false){}
-    virtual ColVector operator () (const ColVector &x, const double &t) const = 0;
+    ColVector operator () (const ColVector &x, const double &t) const{
+        ColVector res = x;
+        compute(x, t, res);
+        return res;
+    }
     virtual ColVector solve(const Matrix &A, const ColVector &c, const ColVector &U0, const double &t0, const double &k) const {return ColVector();}
     bool isLinear() const{return __isLinear;}
+    virtual void compute(const ColVector &x, const double &t, ColVector &res) const = 0;
 };
 
 

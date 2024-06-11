@@ -8,6 +8,7 @@
 #include "VanDerPolFunc.h"
 #include "Hamiltonian.h"
 #include "AliContest.h"
+#include "Pendulum.h"
 #include <jsoncpp/json/json.h>
 using namespace std;
 

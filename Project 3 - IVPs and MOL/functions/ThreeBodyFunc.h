@@ -3,8 +3,7 @@
 
 class ThreeBodyFunc : public TimeFunction{
 public:
-    ColVector operator () (const ColVector &x, const double &t) const{
-        ColVector res(18);
+    void compute(const ColVector &x, const double &t, ColVector &res) const{
         res(0) = x(9);
         res(1) = x(10);
         res(2) = x(11);
@@ -23,7 +22,6 @@ public:
         res(15) = (x(0)-x(6))/pow( sqr(x(6)-x(0)) + sqr(x(7)-x(1)) + sqr(x(8)-x(2)), 1.5) + (x(3)-x(6))/pow( sqr(x(6)-x(3)) + sqr(x(7)-x(4)) + sqr(x(8)-x(5)), 1.5);
         res(16) = (x(1)-x(7))/pow( sqr(x(6)-x(0)) + sqr(x(7)-x(1)) + sqr(x(8)-x(2)), 1.5) + (x(4)-x(7))/pow( sqr(x(6)-x(3)) + sqr(x(7)-x(4)) + sqr(x(8)-x(5)), 1.5);
         res(17) = (x(2)-x(8))/pow( sqr(x(6)-x(0)) + sqr(x(7)-x(1)) + sqr(x(8)-x(2)), 1.5) + (x(5)-x(8))/pow( sqr(x(6)-x(3)) + sqr(x(7)-x(4)) + sqr(x(8)-x(5)), 1.5);
-        return res;
     }
 };
 

@@ -3,11 +3,9 @@
 
 class VanDerPolFunc : public TimeFunction{
 public:
-    ColVector operator () (const ColVector &x, const double &t) const{
-        ColVector res(2);
+    void compute(const ColVector &x, const double &t, ColVector &res) const{
         res(0) = x(1);
         res(1) = 1000*(1-x(0)*x(0))*x(1) - x(0);
-        return res;
     }
 };
 
