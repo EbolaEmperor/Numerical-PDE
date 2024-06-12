@@ -10,6 +10,9 @@ story: solve
 run: solve
 	./solve tests/*.json
 
+tracker: tracker.o IVP.o LMMs.o RungeKutta.o SymplecticMethods.o matrix.o NonLinearSolver.o Polynomial.o functionFactory.o CurveTracker.o
+	g++ tracker.o IVP.o LMMs.o RungeKutta.o SymplecticMethods.o matrix.o NonLinearSolver.o Polynomial.o functionFactory.o CurveTracker.o $(LIB) -o tracker $(OPTIMIZE)
+
 solve: solve.o IVP.o LMMs.o RungeKutta.o SymplecticMethods.o matrix.o NonLinearSolver.o Polynomial.o functionFactory.o
 	g++ solve.o IVP.o LMMs.o RungeKutta.o SymplecticMethods.o matrix.o NonLinearSolver.o Polynomial.o functionFactory.o $(LIB) -o solve $(OPTIMIZE)
 
@@ -27,6 +30,12 @@ MOL/advection.o: MOL/advection.cpp
 
 solve.o: solve.cpp functions/*.h
 	g++ -c solve.cpp $(INC) -Ifunctions $(OPTIMIZE)
+
+tracker.o: tracker.cpp functions/*.h
+	g++ -c tracker.cpp $(INC) -Ifunctions $(OPTIMIZE)
+
+CurveTracker.o: src/CurveTracker.cpp include/CurveTracker.h IVP.o
+	g++ -c src/CurveTracker.cpp $(INC) $(OPTIMIZE)
 
 functionFactory.o: src/functionFactory.cpp include/functionFactory.h
 	g++ -c src/functionFactory.cpp $(INC) $(OPTIMIZE)
@@ -54,6 +63,7 @@ LMMs.o: src/LMMs.cpp include/LMMs.h src/IVP.cpp include/IVP.h src/NonLinearSolve
 
 clean:
 	$(shell if [ -e solve ];then rm solve; fi)
+	$(shell if [ -e tracker ];then rm tracker; fi)
 	$(shell if [ -e MOL/heat ];then rm MOL/heat MOL/*.txt MOL/*.o; fi)
 	$(shell if [ -e MOL/advection ];then rm MOL/advection; fi)
 	$(shell if [ -e result.txt ];then rm *.txt; fi)

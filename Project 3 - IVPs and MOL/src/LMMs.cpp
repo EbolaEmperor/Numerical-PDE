@@ -52,7 +52,7 @@ AdamsBashforthSolver::AdamsBashforthSolver(const int &_p){
 }
 
 void AdamsBashforthSolver::oneStepSolve(TimeFunction &f, const int &i, ColVector &nxtsol){
-    nxtsol = sol[i];
+    nxtsol = sol[i - 1];
     for(int j = 0; j < s; j++)
         nxtsol = nxtsol + timeStep * beta(j) * dsol[i-s+j];
 }

@@ -1,0 +1,9 @@
+{
+    "Problem": "Pendulum",
+    "Method": "Stormer-Verlet",
+    "Order": 2,
+    "Points Number" : 100,
+    "T": 4,
+    "Time Steps": 4,
+    "Output": true
+}
