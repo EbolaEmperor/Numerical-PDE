@@ -1,7 +1,7 @@
 #include "IVP.h"
 #include "functionFactory.h"
 
-class HamiltonianFunc : public TimeFunction{
+class PerturbatedKeplerFunc : public TimeFunction{
 public:
     void compute(const ColVector &x, const double &t, ColVector &res) const{
         const double r = x(0)*x(0) + x(1)*x(1);
@@ -22,10 +22,10 @@ public:
     }
 };
 
-static void registerHamiltonian(void)__attribute__((constructor));
+static void registerPerturbatedKepler(void)__attribute__((constructor));
 
-void registerHamiltonian(){
+void registerPerturbatedKepler(){
     auto& factory = FunctionFactory::Instance();
-    factory.registerFunction("Hamiltonian", [](double arg){ return (TimeFunction*) new HamiltonianFunc(); });
+    factory.registerFunction("Perturbated Kepler", [](double arg){ return (TimeFunction*) new PerturbatedKeplerFunc(); });
 }
 

@@ -1,5 +1,5 @@
 {
-    "Problem": "Hamiltonian",
+    "Problem": "Perturbated Kepler",
     "Method": "Stormer-Verlet",
     "Init": [0.4, 0, 0, 2],
     "T": 120,

@@ -1,5 +1,5 @@
 {
-    "Problem": "Hamiltonian",
+    "Problem": "Perturbated Kepler",
     "Method": "Dormand-Prince 8(7)",
     "Init": [0.4, 0, 0, 2],
     "T": 120,

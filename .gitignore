@@ -7,6 +7,7 @@ build/
 
 # Other files and folders
 .settings/
+.vscode/
 References/
 
 # Executables

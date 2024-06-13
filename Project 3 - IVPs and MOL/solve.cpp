@@ -6,7 +6,7 @@
 #include "StabilityFunc.h"
 #include "StiffSampleFunc.h"
 #include "VanDerPolFunc.h"
-#include "Hamiltonian.h"
+#include "PerturbatedKepler.h"
 #include "AliContest.h"
 #include "Pendulum.h"
 #include <jsoncpp/json/json.h>
