@@ -11,7 +11,10 @@ private:
 
 public:
     BFuncExpr();
-    BFuncExpr(const BFuncExpr<Dim> &rhs): e(rhs.e) {};
+    BFuncExpr(const BFuncExpr<Dim> &rhs) {
+        for(int i = 0; i < 2*Dim; i++)
+            e[i] = rhs.e[i];
+    };
     BFuncExpr(std::shared_ptr<BFuncExpr<Dim>> prhs): BFuncExpr(*prhs) {}
 
     void setExpr(const std::string &bon, const std::string &expr);

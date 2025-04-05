@@ -4,7 +4,7 @@ project(Multigrid)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_BUILD_TYPE RELEASE)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas -Wno-unused-result -Wno-non-template-friend -Wno-unused-variable -DDIM=${DIM}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas -Wno-unused-result -Wno-unused-variable -DDIM=${DIM}")
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
 set(CMAKE_CXX_STANDARD 20)
@@ -36,7 +36,12 @@ set(ROOT_DIR "${CMAKE_SOURCE_DIR}")
 set(MAIN_LIB "Multigrid")
 set(COMMON_LIB "${MAIN_LIB}_common")
 
-find_package(jsoncpp)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(JSONCPP REQUIRED jsoncpp)
+message("JSONCPP_LIBRARIES: ${JSONCPP_LIBRARIES}")
+message("JSONCPP_INCLUDE_DIRS: ${JSONCPP_INCLUDE_DIRS}")
+
+include_directories(${JSONCPP_INCLUDE_DIRS})
 
 add_subdirectory(src)
 add_subdirectory(examples)

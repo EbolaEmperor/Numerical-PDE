@@ -11,7 +11,7 @@
 #include <cmath>
 #include <iostream>
 #include <fstream>
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 #include <string>
 #include <vector>
 #include <ctime>
