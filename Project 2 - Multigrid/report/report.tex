@@ -1542,14 +1542,14 @@ LU分解         & 0.002 & 0.022 & 0.42 & 8.168 & - & - & - & 4.281
 \end{theorem}
 
 \begin{proof}
-  设$||\cdot||$为任意的一个范数，由于有限维线性空间中所有范数都等价，再由引理4.12，存在$C,K>0$，使得：
+  考虑二范数 $||\cdot||_2$，注意到 $\lambda_{\min}(B^h)=O(1)\approx 60$，再由引理4.12，存在$C,K>0$，使得：
   \begin{equation*}
-    ||\mathbf{u}^h-\mathbf{v}^h||\leq C||\mathbf{u}^h-\mathbf{v}^h||_{B^h}\leq CKh^2.
+    ||\mathbf{u}^h-\mathbf{v}^h||_2\leq \lambda^{-1}_{\min}(B^h)||\mathbf{u}^h-\mathbf{v}^h||_{B^h}\leq \lambda^{-1}_{\min}(B^h)CKh^2.
   \end{equation*}
 
-  又由泰勒展开知道离散误差$||\mathbf{u}^h-\mathbf{u}||=O(h^2)$，因此：
+  又由泰勒展开知道离散误差$||\mathbf{u}^h-\mathbf{u}||_2=O(h^2)$，因此：
   \begin{equation*}
-    ||\mathbf{E}^h||\leq ||\mathbf{u}^h-\mathbf{u}||+||\mathbf{u}^h-\mathbf{v}^h||=O(h^2).
+    ||\mathbf{E}^h||_2\leq ||\mathbf{u}^h-\mathbf{u}||_2+||\mathbf{u}^h-\mathbf{v}^h||_2=O(h^2).
   \end{equation*}
 \end{proof}
 
